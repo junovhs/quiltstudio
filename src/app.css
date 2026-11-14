@@ -1,0 +1,77 @@
+@layer reset, tokens, base, app;
+
+@layer reset {
+  *, *::before, *::after { box-sizing: border-box; margin: 0; }
+  button, input, select { font: inherit; color: inherit; }
+}
+
+@layer tokens {
+  :root {
+    color-scheme: light dark;
+    --bg: light-dark(oklch(97.5% 0.006 80), oklch(19% 0.01 260));
+    --panel: light-dark(oklch(100% 0 0), oklch(23% 0.012 260));
+    --sunk: light-dark(oklch(94.5% 0.008 80), oklch(16% 0.01 260));
+    --ink: light-dark(oklch(25% 0.02 60), oklch(93% 0.01 80));
+    --muted: light-dark(oklch(52% 0.02 60), oklch(68% 0.015 260));
+    --line: light-dark(oklch(90% 0.01 80), oklch(31% 0.015 260));
+    --accent: oklch(58% 0.19 262);
+    --accent-soft: oklch(from var(--accent) l c h / 14%);
+    --warn: light-dark(oklch(55% 0.13 70), oklch(80% 0.12 80));
+    --r: 10px;
+    --ease: cubic-bezier(.2, .8, .2, 1);
+    interpolate-size: allow-keywords;
+  }
+}
+
+@layer base {
+  html, body { height: 100%; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font: 13.5px/1.45 "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-feature-settings: "tnum", "cv11";
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  button {
+    cursor: pointer; border: 1px solid var(--line); background: var(--panel);
+    border-radius: 7px; padding: 5px 9px; corner-shape: squircle;
+    transition: background .15s, border-color .15s, color .15s;
+    &:hover:not(:disabled) { border-color: var(--muted); }
+    &:disabled { opacity: .4; cursor: default; }
+    &.on { background: var(--accent); border-color: var(--accent); color: white; }
+    &.ghost { border-color: transparent; background: transparent; &:hover:not(:disabled) { background: var(--sunk); } }
+  }
+  input[type=number], input[type=text] {
+    border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 3px 6px;
+    field-sizing: content; min-width: 3ch;
+    &:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
+  }
+  input[type=number] { text-align: right; -moz-appearance: textfield; &::-webkit-inner-spin-button { display: none; } }
+  h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
+  kbd { font: 11px ui-monospace, monospace; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; color: var(--muted); }
+
+  [popover] {
+    border: 1px solid var(--line); border-radius: var(--r); background: var(--panel); color: var(--ink);
+    box-shadow: 0 12px 40px oklch(0% 0 0 / 22%); padding: 10px;
+    opacity: 1; scale: 1; transition: opacity .15s var(--ease), scale .15s var(--ease), display .15s allow-discrete, overlay .15s allow-discrete;
+    @starting-style { opacity: 0; scale: .96; }
+    &:not(:popover-open) { opacity: 0; scale: .96; }
+  }
+  dialog {
+    border: 1px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--ink);
+    padding: 0; margin: auto; max-height: 86dvh; width: min(760px, 94vw);
+    box-shadow: 0 30px 80px oklch(0% 0 0 / 30%);
+    &::backdrop { background: oklch(20% 0.02 260 / 40%); backdrop-filter: blur(3px); }
+  }
+}
+
+/* ---------- fabric fills: flat colours, or your photos ---------- */
+@property --ppi { syntax: '<length>'; inherits: true; initial-value: 8px; }
+
+@layer app {
+  .rg { position: absolute; inset: 0; }
+  .empty-fill {
+    background: repeating-linear-gradient(45deg, var(--sunk) 0 4px, transparent 4px 8px);
+    outline: 1px dashed var(--line); outline-offset: -1px;
+  }
+}

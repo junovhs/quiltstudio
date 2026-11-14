@@ -2,7 +2,7 @@
 
 **Status:** planning · **Units:** inches, finished unless marked · **Seam allowance:** ¼″
 
-The live plan is [index.html](index.html): it draws the quilt from CSS shapes and calculates
+The designer app (src/, deployed to Cloudflare Pages) draws the quilt from simple shapes and calculates
 block sizes, the cut list, yardage and sewing order from a handful of size inputs.
 This file records the design decisions behind it.
 

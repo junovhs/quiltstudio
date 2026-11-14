@@ -1,9 +1,18 @@
 # QuiltStudio
 
-A planner for the floral medallion quilt. Open `index.html` in a browser (or publish it with
-GitHub Pages: Settings → Pages → Deploy from branch → main / root).
+A quilt designer. Everything is built from simple pieces: squares, half-square
+triangles and quarter-square triangles, grouped into blocks, which are grouped into
+bigger blocks, which make up the quilt. Edit a block once and every copy of it updates.
+Yardage, cut list and sewing order are worked out from the design.
 
-Change the sizes on the left; the mockup, block breakdown, fabric yardage, cut list and sewing
-order all update. Sizes, colors and checked-off steps are saved in your browser.
+Live: https://quiltstudio-34v.pages.dev
 
-Design decisions live in `PROJECT.md`.
+```
+npm install
+npm run dev       # local editor
+npm run deploy    # build + deploy to Cloudflare Pages (project "quiltstudio")
+```
+
+Stack: Svelte 5 + TypeScript + Vite, modern CSS (container queries, anchor positioning,
+popover API, view transitions, oklch/light-dark, @property). Designs save in the browser;
+fabric photos are stored in IndexedDB. Export/import from the ⚙ menu.
