@@ -3,283 +3,494 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#102e77">
-<meta name="description" content="QuiltStudio — a project planner for a 48-inch floral medallion quilt.">
-<title>QuiltStudio · Floral Medallion</title>
+<title>QuiltStudio</title>
 <style>
-:root{--ink:#28241f;--muted:#686660;--line:#ddd8cb;--paper:#fbfaf6;--cream:#fffdf7;--blue:#1249b1;--blueDeep:#102f7c;--brown:#61291b;--wash:#f2eee6;--good:#267257}
-*{box-sizing:border-box}
-html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif}
-button,input,textarea,select{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible,textarea:focus-visible,a:focus-visible{outline:3px solid #4480f7;outline-offset:2px}
-a{color:var(--blueDeep)}p{margin:.35rem 0 1rem}
-header{background:var(--blueDeep);color:#fff;border-bottom:7px solid #e9dba4}
-.header-in{max-width:1280px;margin:auto;padding:26px 24px;display:flex;justify-content:space-between;gap:20px;align-items:center}
-.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.18em;font-weight:750;opacity:.78}
-h1{font:normal 40px/1.06 Georgia,serif;margin:5px 0 7px}h2{font:normal 29px/1.13 Georgia,serif;margin:0 0 8px}h3{font:normal 21px/1.2 Georgia,serif;margin:0 0 10px}
-.sub{opacity:.87;font-size:14px}.head-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
-.btn{border:1px solid #c4c4b9;background:#fff;color:var(--ink);border-radius:8px;padding:9px 13px;font-weight:650;text-align:center}
-.btn:hover{background:#f1eee6}.btn.dark{background:#163b90;color:#fff;border-color:#5273b4}.btn.dark:hover{background:#2555b9}
-.btn.small{font-size:12px;padding:6px 10px}
-.shell{max-width:1280px;margin:auto;padding:26px 24px 70px}
-.nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:23px;border-bottom:1px solid var(--line);padding-bottom:13px}
-.nav button{border:1px solid transparent;background:transparent;border-radius:7px;padding:9px 15px;color:#554f48;font-weight:650}
-.nav button[aria-selected=true]{color:var(--blueDeep);background:#e8eefb;border-color:#bfcfed}
-.view[hidden]{display:none!important}
-.grid2{display:grid;grid-template-columns:minmax(320px,1.28fr) minmax(290px,.9fr);gap:22px;align-items:start}
-.panel{background:#fff;border:1px solid var(--line);border-radius:12px;padding:21px;box-shadow:0 5px 23px #29211308}
-.panel + .panel{margin-top:17px}
-.panel .overline{font-weight:750;letter-spacing:.11em;font-size:11px;color:var(--blueDeep);text-transform:uppercase}
-.stamp{display:inline-block;color:#795825;background:#fbf0d9;border:1px solid #ebd3a2;padding:4px 9px;border-radius:30px;font-size:12px;font-weight:700}
-.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:21px}
-.metric{background:#fff;border:1px solid var(--line);border-radius:11px;padding:14px 16px}
-.metric strong{display:block;font:normal 27px Georgia,serif;color:var(--blueDeep)}
-.metric span{color:var(--muted);font-size:12px}
-.diagram{background:#f6f1e7;border:1px solid #e6dfd2;border-radius:10px;padding:10px}
-.diagram svg{width:100%;display:block;max-height:660px}
-.map-region{cursor:pointer;outline:none}.map-region:hover .click-area,.map-region:focus-visible .click-area{stroke:#f7d874;stroke-width:4;stroke-dasharray:8 5}
-.map-region.is-selected .click-area{stroke:#ffe082;stroke-width:4}
-.legend{display:flex;gap:13px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:12px 0 0}
-.dot{display:inline-block;width:11px;height:11px;margin-right:4px;border-radius:2px;vertical-align:middle}
-table{width:100%;border-collapse:collapse;text-align:left;font-size:13px}
-th,td{padding:11px 9px;border-bottom:1px solid #e9e5dc;vertical-align:top}
-th{background:#f8f5ed;color:#514a42;font-size:11px;text-transform:uppercase;letter-spacing:.07em}
-td small{display:block;color:var(--muted);line-height:1.3;margin-top:2px}
-table .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
-.table-scroll{overflow-x:auto}table{min-width:650px}
-.detail-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between}
-.detail-head h3{margin:0}
-.muted{color:var(--muted)}.small{font-size:12px}.flow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.statline{padding:14px 0;border-bottom:1px solid var(--line)}
-.statline:last-child{border-bottom:0}
-.swatch{display:inline-block;width:20px;height:20px;border:1px solid #ccc;vertical-align:middle;border-radius:4px;margin-right:9px}
-.barwrap{background:#e9e4d8;border-radius:20px;height:9px;overflow:hidden;margin:10px 0}.bar{background:var(--blue);height:100%;width:0%;transition:width .2s}
-.checkrow{display:flex;align-items:flex-start;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
-.checkrow input{margin-top:5px;accent-color:var(--blueDeep);width:17px;height:17px}
-.checkrow:last-child{border-bottom:0}
-.checkrow span{flex:1}
-.checkrow b{display:block}
-.checkrow small{display:block;color:var(--muted);line-height:1.35}
-.input{border:1px solid #ccc5b7;border-radius:7px;background:#fff;padding:7px 8px;max-width:100%}
-.input:focus{border-color:var(--blue)}
-input[type=number]{width:88px}textarea.input{width:100%;min-height:140px;resize:vertical;line-height:1.5}
-.note{padding:12px 15px;background:#f3eee1;border-left:3px solid #ab8550;font-size:13px;color:#5e4f39;border-radius:3px}
-.pill{border-radius:20px;padding:3px 8px;font-size:11px;font-weight:750;background:#ebeff8;color:var(--blueDeep)}
-.section-intro{max-width:810px;color:#5f5b54;margin-bottom:19px}
-.budget-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
-.budget-card{padding:15px;border-radius:10px;border:1px solid var(--line);background:#fff}
-.budget-card label{display:flex;align-items:center;font-size:14px;font-weight:700;margin-bottom:9px}
-.budget-card .inputs{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-.ref-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
-.refcard{padding:16px;border:1px solid var(--line);border-radius:10px;background:#fff}
-.refcard svg{width:100%;height:auto;max-height:220px;display:block;background:#f2eee4;border-radius:4px}
-.refcard strong{display:block;margin:10px 0 4px}
-ol{padding-left:1.3rem}li{padding:4px 0}
-.inline-status{color:var(--good);font-size:12px;font-weight:700;min-height:20px;margin-top:7px}
-.footer{margin-top:28px;border-top:1px solid var(--line);padding-top:16px;font-size:12px;color:var(--muted)}
-footer a{margin-right:12px}
-@media(max-width:800px){.header-in{align-items:flex-start;flex-direction:column}.grid2{grid-template-columns:1fr}.metrics{grid-template-columns:1fr 1fr 1fr}.budget-list{grid-template-columns:1fr}.ref-grid{grid-template-columns:1fr}}
-@media(max-width:530px){h1{font-size:32px}.shell{padding:18px 12px 45px}.header-in{padding:19px 15px}.panel{padding:15px}.metrics{grid-template-columns:1fr}.nav{gap:3px}.nav button{padding:9px 10px;font-size:13px}.metric{display:flex;align-items:baseline;justify-content:space-between}.metric strong{font-size:24px}}
-@media print{body{background:#fff}header{color:#000;background:#fff;border-bottom:1px solid #aaa}.head-actions,.nav,.noprint{display:none!important}.view[hidden]{display:block!important}.shell{max-width:none;padding:0}.panel,.metric{box-shadow:none;break-inside:avoid}.grid2{grid-template-columns:1fr 1fr}.budget-list{grid-template-columns:repeat(2,1fr)}}
+  :root {
+    --floral: #1f4fbf; --brown: #5a2d1a; --cream: #f6ecd9; --black: #1b1b1b;
+    --bg: #faf7f2; --panel: #ffffff; --ink: #2a2420; --muted: #7a6f66; --line: #e6ddd2; --accent: #1f4fbf;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { padding: 20px 24px 8px; display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: baseline; }
+  h1 { margin: 0; font-size: 22px; letter-spacing: -.01em; }
+  h2 { font-size: 17px; margin: 0 0 12px; }
+  h3 { font-size: 15px; margin: 0 0 6px; }
+  #summary { color: var(--muted); }
+  #summary b { color: var(--ink); }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 16px 48px; }
+  .top { display: grid; grid-template-columns: 300px 1fr; gap: 20px; align-items: start; }
+  @media (max-width: 820px) { .top { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+  section.panel { margin-top: 20px; }
+  .field { display: grid; grid-template-columns: 1fr 78px; gap: 8px; align-items: center; margin-bottom: 10px; font-size: 13.5px; }
+  .field small { display: block; color: var(--muted); font-size: 12px; line-height: 1.3; }
+  input[type=number] { width: 100%; padding: 5px 6px; border: 1px solid var(--line); border-radius: 6px; font: inherit; text-align: right; }
+  input[type=color] { width: 100%; height: 30px; border: 1px solid var(--line); border-radius: 6px; padding: 2px; background: #fff; }
+  .derived { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 10px; margin-top: 4px; }
+  .derived div { display: flex; justify-content: space-between; }
+  .derived b { color: var(--ink); font-weight: 600; }
+  button { font: inherit; border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+  button:hover { border-color: var(--muted); }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .warn { background: #fff4e0; border: 1px solid #f0d29a; color: #7a4b00; border-radius: 8px; padding: 8px 10px; font-size: 13px; margin-top: 10px; }
+
+  /* ---------- quilt rendering ---------- */
+  #mock { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+  .binding { width: min(100%, 720px); background: repeating-conic-gradient(var(--black) 0 25%, var(--cream) 0 50%) 0 0 / 7px 7px; box-shadow: 0 6px 24px rgba(0,0,0,.18); }
+  .g { display: grid; min-width: 0; min-height: 0; }
+  .c { position: relative; overflow: hidden; min-width: 0; min-height: 0; }
+  .c > i { position: absolute; inset: 0; }
+  .seams .leaf { box-shadow: inset 0 0 0 .5px rgba(0,0,0,.35); }
+  .seams .blk { box-shadow: inset 0 0 0 1px rgba(0,0,0,.55); }
+  .fab-brown { background: var(--brown); }
+  .fab-cream { background: var(--cream); }
+  .fab-black { background: var(--black); }
+  .fab-floral {
+    background:
+      radial-gradient(circle at 25% 30%, #f9c3cc 0 2px, #e0475b 2.2px 3px, transparent 3.3px),
+      radial-gradient(circle at 70% 72%, #ecf34f 0 2px, transparent 2.4px),
+      radial-gradient(circle at 82% 22%, #ffffff 0 1.1px, transparent 1.5px),
+      var(--floral);
+    background-size: 17px 17px, 13px 12px, 11px 9px;
+  }
+
+  .blocks { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
+  .blockcard .art { width: 100%; max-width: 300px; margin: 6px 0 10px; }
+  .blockcard .art.wide { max-width: 100%; }
+  ul.units { margin: 0; padding-left: 18px; font-size: 13.5px; }
+  ul.units li { margin-bottom: 4px; }
+  .tag { display: inline-block; font-size: 12px; background: #eef2fb; color: var(--accent); border-radius: 999px; padding: 1px 8px; margin-left: 6px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 12.5px; }
+  td.n { text-align: right; white-space: nowrap; }
+  .swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: -2px; margin-right: 6px; border: 1px solid rgba(0,0,0,.2); }
+  .yard { font-size: 20px; font-weight: 650; }
+  .fabgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 14px; }
+  .fabgrid .panel { padding: 12px; }
+
+  ol.steps { padding-left: 0; list-style: none; margin: 0; counter-reset: s; }
+  ol.steps li { counter-increment: s; padding: 8px 0; border-bottom: 1px solid var(--line); display: flex; gap: 10px; }
+  ol.steps li::before { content: counter(s); flex: 0 0 24px; height: 24px; border-radius: 50%; background: #eef2fb; color: var(--accent); font-size: 12px; font-weight: 700; display: grid; place-items: center; }
+  ol.steps label { flex: 1; cursor: pointer; }
+  ol.steps input:checked + span { color: var(--muted); text-decoration: line-through; }
+  ol.steps .phase { font-weight: 650; }
 </style>
 </head>
 <body>
 <header>
-  <div class="header-in">
-    <div><div class="eyebrow">QuiltStudio / Project 001</div><h1>Floral Medallion Quilt</h1><div class="sub">A living construction plan · Finished target: 48 × 48 inches · inches throughout</div></div>
-    <div class="head-actions">
-      <button class="btn dark" id="exportBtn">Export my progress</button>
-      <button class="btn" id="importBtn">Import progress</button>
-      <button class="btn" onclick="window.print()">Print plan</button>
-      <input id="importFile" type="file" accept="application/json,.json" hidden>
-    </div>
-  </div>
+  <h1>QuiltStudio</h1>
+  <div id="summary"></div>
 </header>
-<main class="shell">
-  <div class="nav" role="tablist" aria-label="Planner sections">
-    <button role="tab" aria-selected="true" data-view="overview">Overview</button>
-    <button role="tab" aria-selected="false" data-view="cuts">Blocks &amp; cuts</button>
-    <button role="tab" aria-selected="false" data-view="fabric">Fabric &amp; shopping</button>
-    <button role="tab" aria-selected="false" data-view="reference">References &amp; notes</button>
+
+<div class="wrap">
+  <div class="top">
+    <aside class="panel">
+      <h2>Sizes (finished, inches)</h2>
+      <div id="controls"></div>
+      <div class="derived" id="derived"></div>
+      <h2 style="margin-top:16px">Fabric colors</h2>
+      <div id="colors"></div>
+      <div class="row" style="margin-top:8px"><button id="reset">Reset to defaults</button></div>
+    </aside>
+    <div id="mock">
+      <div class="binding" id="bindingWrap"><div id="quilt"></div></div>
+      <label class="muted"><input type="checkbox" id="seams" checked> Show seams</label>
+      <div id="warnings" style="width:min(100%,720px)"></div>
+    </div>
   </div>
-  <section class="view" id="overview" role="tabpanel">
-    <div class="metrics">
-      <div class="metric"><strong>48 × 48″</strong><span>Finished dimensions, including border</span></div>
-      <div class="metric"><strong>13 + border</strong><span>9 pieced blocks + 4 strips (plus 4 corner squares)</span></div>
-      <div class="metric"><strong>4½ yd</strong><span>Estimated top fabric only; provisional</span></div>
-    </div>
-    <div class="grid2">
-      <article class="panel">
-        <div class="detail-head"><div><div class="overline">Interactive construction map</div><h2>Quilt layout</h2></div><span class="stamp">Draft geometry</span></div>
-        <p class="small muted">Select a block or border to inspect it. The colors and patterned motifs approximate the composition; see the reference notes for the source images.</p>
-        <div class="diagram"><svg id="quilt-map" viewBox="0 0 480 480" role="img" aria-label="Interactive 48-inch square quilt assembly plan"></svg></div>
-        <div class="legend">
-          <span><span class="dot" style="background:#1249b1"></span>Blue floral</span>
-          <span><span class="dot" style="background:#61291b"></span>Brown</span>
-          <span><span class="dot" style="background:#f7edd9"></span>Cream</span>
-          <span><span class="dot" style="background:#141414"></span>Black / pieced checkerboard</span>
-        </div>
-      </article>
-      <div>
-        <article class="panel" aria-live="polite">
-          <div class="overline">Selected component</div><div class="detail-head"><h3 id="selectedName">Central star</h3><span class="pill" id="selectedQty">1 needed</span></div>
-          <p id="selectedDescription"></p>
-          <div class="statline"><strong>Finished:</strong> <span id="selectedFinish"></span></div>
-          <div class="statline"><strong>Unit cutting size:</strong> <span id="selectedCut"></span></div>
-          <p id="selectedNote" class="small muted"></p>
-          <button class="btn small noprint" id="showCuts">See cutting checklist</button>
-        </article>
-        <article class="panel">
-          <div class="overline">Construction sequence</div><h3>Assembly order</h3>
-          <div id="assemblyList"></div>
-          <div class="barwrap"><div class="bar" id="assemblyBar"></div></div>
-          <div class="small muted" id="assemblyProgress"></div>
-        </article>
-        <article class="panel">
-          <div class="overline">Important</div><h3>What is not final yet</h3>
-          <p class="small">Block geometry and exact triangle cutting instructions are not drafted. Checkerboard border at ½″ finished width means tiny ½″ finished squares; verify this is practical before cutting. All size estimates are for the finished <em>top</em>, not after shrinkage.</p>
-        </article>
-      </div>
-    </div>
+
+  <section class="panel">
+    <h2>Blocks</h2>
+    <div class="blocks" id="blocks"></div>
   </section>
-  <section class="view" id="cuts" role="tabpanel" hidden>
-    <div class="detail-head"><div><div class="overline">Working cut inventory</div><h2>Blocks &amp; cuts</h2></div><span class="stamp">¼″ seam allowance</span></div>
-    <p class="section-intro">All dimensions are inches. “Unit cut” includes seam allowance for the whole block or simple rectangle, not individual subpieces. Exact pieces for geometric blocks need drafting and test sewing first.</p>
-    <div class="panel table-scroll"><table><thead><tr><th>Done</th><th>Component</th><th class="num">Quantity</th><th>Finished each</th><th>Unit cut / unfinished</th><th>Planning note</th></tr></thead><tbody id="cutRows"></tbody></table></div>
-    <div class="grid2" style="margin-top:19px">
-      <article class="panel"><h3>Pieced border tally</h3><p>The black-and-cream outer checkerboard is made from <strong>individual fabric pieces</strong>, not a printed checkerboard.</p><p><strong>380 squares total</strong> at a provisional ½″ finished square size: 190 cream, 190 black. Each is cut 1″ square with ¼″ seams. Two side borders use 94 squares each, and the top/bottom use 96 each.</p><p class="small muted">This assumes a single row of alternating squares around the outside. The black/cream corner continuity and best strip-piecing method remain to be decided.</p></article>
-      <article class="panel"><h3>Cutting reminders</h3><div id="cutReminders"></div></article>
-    </div>
+
+  <section class="panel">
+    <h2>Fabric needed</h2>
+    <div class="fabgrid" id="yardage"></div>
+    <p class="muted" id="yardnote"></p>
   </section>
-  <section class="view" id="fabric" role="tabpanel" hidden>
-    <div class="overline">Preliminary shopping budget</div><h2>Fabric &amp; shopping</h2>
-    <p class="section-intro">Estimates assume 42–44″-wide quilting cotton with at least 40″ usable width. Enter purchased yardage to see your planned allowance; the amounts are editable and saved in this browser.</p>
-    <div class="metrics"><div class="metric"><strong id="budgetTotal">4½ yd</strong><span>Quilt top estimates (excluding backing and binding)</span></div><div class="metric"><strong id="purchasedTotal">0 yd</strong><span>Entered as purchased</span></div><div class="metric"><strong>380</strong><span>Potential pieced outer-border squares</span></div></div>
-    <div class="budget-list" id="budgetCards"></div>
-    <article class="panel" style="margin-top:20px">
-      <h3>Backing, batting &amp; binding (separate from top budget)</h3>
-      <div class="statline"><strong>Backing:</strong> approx. 3¼ yd of regular 42–44″ fabric, pieced, <em>or</em> 1⅔ yd of 108″ wide fabric.</div>
-      <div class="statline"><strong>Batting:</strong> at least 56″ × 56″.</div>
-      <div class="statline"><strong>Binding:</strong> approximately ½ yard if made from separate fabric.</div>
-      <p class="small muted">Backing and batting estimates allow extra area for quilting; actual requirements depend on your longarm / domestic-quilting setup.</p>
-    </article>
-    <article class="panel" style="margin-top:20px">
-      <h3>Blue floral reservation</h3>
-      <p>Four matching strips, cut <strong>4¼″ × 40″</strong>, plus four floral corner squares, cut <strong>4¼″ × 4¼″</strong>. Reserve the remaining floral fabric for the star, bands, and triangle accents.</p>
-      <p class="note">No separate checkerboard-print fabric is being purchased. Both the interior checkerboards and the outer border use the cream and black yardage.</p>
-    </article>
+
+  <section class="panel">
+    <h2>Cut list</h2>
+    <div id="cuts"></div>
   </section>
-  <section class="view" id="reference" role="tabpanel" hidden>
-    <div class="overline">Design archive</div><h2>References &amp; design notes</h2>
-    <p class="section-intro">The six supplied reference images and their descriptions are documented in <a href="references/REFERENCE.md">references/REFERENCE.md</a>. The interactive drawing is a construction schematic, not an exact recreation of the source artwork.</p>
-    <div class="ref-grid">
-      <div class="refcard"><strong>Original full-quilt concept</strong><p class="small muted">Symmetrical royal-blue floral medallion, brown and cream triangles, black/cream grids, narrow outer checkerboard.</p><a href="references/REFERENCE.md">See image inventory</a></div>
-      <div class="refcard"><strong>Four corner blocks</strong><p class="small muted">Square cream / black / brown / blue-floral geometric block; four repeated rotations.</p><button class="btn small" data-select="corner">Locate on map</button></div>
-      <div class="refcard"><strong>Four side blocks</strong><p class="small muted">Rectangular mirrored brown-and-cream triangle arrangement with central black/cream checkerboard.</p><button class="btn small" data-select="side">Locate on map</button></div>
-      <div class="refcard"><strong>Central star</strong><p class="small muted">Eight-point brown star, blue floral negative space and black/cream checkerboard center.</p><button class="btn small" data-select="star">Locate on map</button></div>
-      <div class="refcard"><strong>Blue floral strips</strong><p class="small muted">Four identical main strips. Top/bottom each get an additional blue floral square on both ends.</p><button class="btn small" data-select="strip">Locate on map</button></div>
-      <div class="refcard"><strong>Pieced checkerboard border</strong><p class="small muted">Alternate black and cream fabric pieces; NOT a checkerboard print.</p><button class="btn small" data-select="checker">Locate on map</button></div>
-    </div>
-    <div class="grid2" style="margin-top:19px">
-      <article class="panel"><h3>My project notes</h3><label for="projectNotes" class="small muted">Notes save in this browser. Export progress to back them up; they do not automatically commit to GitHub.</label><textarea id="projectNotes" class="input" placeholder="Decisions, fabric choices, test block results, measurements..."></textarea><div class="inline-status" id="saveStatus" aria-live="polite"></div></article>
-      <article class="panel"><h3>Open decisions</h3>
-        <div id="decisions"></div>
-        <p class="small muted">Mark items resolved as your design develops; this is a personal checklist, not a claim that the cutting instructions have been validated.</p>
-      </article>
-    </div>
+
+  <section class="panel">
+    <h2>Sewing order</h2>
+    <ol class="steps" id="steps"></ol>
   </section>
-  <footer class="footer">
-    <p>QuiltStudio Project 001 · Snapshot 2026-11-14 · Static GitHub Pages app. Changes to progress, purchases, and notes stay in this browser's local storage until exported.</p>
-    <a href="PROJECT.md">Full project plan</a><a href="data/project.json">Project data</a><a href="https://github.com/junovhs/quiltstudio">GitHub repository</a>
-  </footer>
-</main>
+</div>
+
 <script>
-(function(){
-'use strict';
-var key='quiltstudio.project001.v1';
-var defaults={cut:{},steps:{},purchased:{},fabricChecked:{},decisions:{},notes:''};
-var state;
-try{var saved=JSON.parse(localStorage.getItem(key)||'{}');state=Object.assign({},defaults,saved);}catch(e){state=Object.assign({},defaults);}
-['cut','steps','purchased','fabricChecked','decisions'].forEach(function(k){if(!state[k]||typeof state[k]!=='object')state[k]={};});
-var parts=[
- {id:'corner',name:'Corner patchwork block',qty:4,fin:'9½″ × 9½″',cut:'10″ × 10″ unfinished',note:'Four repeats. Exact subpiece cutting is not drafted; pattern uses blue floral, cream, brown, black.'},
- {id:'side',name:'Rectangular side block',qty:4,fin:'20½″ × 9½″',cut:'21″ × 10″ unfinished',note:'Two horizontal and two rotated vertically. Mirror/rotation and triangles must be mapped.'},
- {id:'star',name:'Central star block',qty:1,fin:'20½″ × 20½″',cut:'21″ × 21″ unfinished',note:'Brown eight-point star with blue floral accents and black/cream checkerboard center. Exact patchwork subdivisions TBD.'},
- {id:'strip',name:'Blue floral main strip',qty:4,fin:'39½″ × 3¾″',cut:'40″ × 4¼″',note:'All FOUR identical. Two serve left/right; two receive corner squares for top/bottom.'},
- {id:'floralSquare',name:'Blue floral corner square',qty:4,fin:'3¾″ × 3¾″',cut:'4¼″ × 4¼″',note:'Sew one to each end of the top and bottom floral strips. Four total.'},
- {id:'borderCream',name:'Outer border cream checker square',qty:190,fin:'½″ × ½″',cut:'1″ × 1″',note:'Conditional count for a single-square-wide alternating border, ½″ finished squares.'},
- {id:'borderBlack',name:'Outer border black checker square',qty:190,fin:'½″ × ½″',cut:'1″ × 1″',note:'Conditional count for a single-square-wide alternating border, ½″ finished squares.'}
+/* ================================================================
+   Everything in the quilt is a rectangle on a grid. Each rectangle
+   (a "cell") is filled one of five ways:
+     solid  – one fabric
+     split  – diagonal split, fabric A in one corner triangle
+     goose  – flying goose: big triangle (goose) pointing a direction, two wings
+     check  – n×n checkerboard
+     block  – another grid (a block placed inside the quilt)
+   All sizes are FINISHED inches. Seam allowance is added only for cutting.
+   ================================================================ */
+
+const DEFAULTS = {
+  a: 2.25,   // corner block: brown corner squares; also side-block floral band depth
+  c: 4.5,    // nine-patch size (corner + side blocks)
+  s: 5,      // star block: floral corner squares (= star-point goose height)
+  S: 10,     // star block: 4×4 center checkerboard
+  b: 4.5,    // floral border width
+  seam: 0.25,
+  wof: 42,   // usable width of fabric
+  colors: { floral: '#1f4fbf', brown: '#5a2d1a', cream: '#f6ecd9', black: '#1b1b1b' }
+};
+const FABRICS = { floral: 'Blue floral', brown: 'Chocolate brown', cream: 'Cream', black: 'Black' };
+const PARAMS = [
+  ['a', 'Corner block: brown corners', 'Also the depth of the floral bands in the side blocks'],
+  ['c', 'Nine-patch', 'Center of corner & side blocks'],
+  ['s', 'Star: floral corners', 'Also the height of the star-point geese'],
+  ['S', 'Star: center checkerboard', '4 × 4 squares'],
+  ['b', 'Floral border width', ''],
+  ['seam', 'Seam allowance', ''],
+  ['wof', 'Usable fabric width', 'For yardage math'],
 ];
-var fabrics=[
- {id:'floral',name:'Royal blue floral',estimate:2,swatch:'#1649ba',desc:'Background, accents, four strips and four corner squares'},
- {id:'cream',name:'Cream',estimate:1,swatch:'#f5eddb',desc:'Triangles, grid squares, pieced border'},
- {id:'brown',name:'Chocolate brown',estimate:1,swatch:'#61291b',desc:'Star points, triangles, corners'},
- {id:'black',name:'Black',estimate:.5,swatch:'#161616',desc:'Checkerboards inside and pieced border'}
-];
-var steps=[
- 'Construct the four corner patchwork blocks',
- 'Construct the four rectangular side blocks',
- 'Construct the central eight-point star block',
- 'Join the nine blocks into a 39½″ finished center',
- 'Attach two blue floral strips to the left and right',
- 'Attach two corner squares to each remaining floral strip',
- 'Attach the completed long floral strips at top and bottom',
- 'Piece and attach the black/cream checkerboard outer border'
-];
-var decisionList=[
- 'Confirm exact grid, triangle units and cutting directions for each block',
- 'Test the proposed ½″ finished outer-border square size',
- 'Choose piecing method and corner color sequence for outer checker border',
- 'Decide binding fabric and verify backing / batting requirements',
- 'Check true fabric width and directional floral print placement'
-];
-function save(){try{localStorage.setItem(key,JSON.stringify(state));document.getElementById('saveStatus').textContent='Saved in this browser.';}catch(e){document.getElementById('saveStatus').textContent='Browser storage unavailable; export to save.';}}
-function el(tag,attrs,parent){var n=document.createElement(tag);Object.keys(attrs||{}).forEach(function(k){if(k==='text')n.textContent=attrs[k];else n.setAttribute(k,attrs[k]);});if(parent)parent.appendChild(n);return n;}
-function svg(tag,attrs,parent){return elNS(tag,attrs,parent);}
-function elNS(tag,attrs,parent){var n=document.createElementNS('http://www.w3.org/2000/svg',tag);Object.keys(attrs||{}).forEach(function(k){n.setAttribute(k,attrs[k]);});if(parent)parent.appendChild(n);return n;}
-function roundYd(x){return (Math.round(x*100)/100).toLocaleString(undefined,{maximumFractionDigits:2})+' yd';}
-function part(id){return parts.filter(function(p){return p.id===id;})[0]||parts[0];}
-function selectPart(id){var mapped=id==='checker'?'borderCream':id;var p=part(mapped);document.getElementById('selectedName').textContent=p.name;document.getElementById('selectedQty').textContent=p.qty+' needed';document.getElementById('selectedDescription').textContent=p.note;document.getElementById('selectedFinish').textContent=p.fin;document.getElementById('selectedCut').textContent=p.cut;document.getElementById('selectedNote').textContent=id==='checker'?'Outer checkerboard is individually pieced from cream and black; no printed checkerboard fabric.':'All dimensions provisional until full block-by-block drafting.';
-document.querySelectorAll('.map-region').forEach(function(n){n.classList.toggle('is-selected',n.getAttribute('data-kind')===id);});}
-function renderCuts(){var body=document.getElementById('cutRows');body.textContent='';parts.forEach(function(p){var row=el('tr',{},body);var cell=el('td',{},row),check=el('input',{type:'checkbox','aria-label':'Cut '+p.name},cell);check.checked=!!state.cut[p.id];check.addEventListener('change',function(){state.cut[p.id]=check.checked;save();});el('td',{text:p.name},row);el('td',{text:String(p.qty),class:'num'},row);el('td',{text:p.fin},row);el('td',{text:p.cut},row);el('td',{text:p.note},row);});var box=document.getElementById('cutReminders');box.textContent='';['Label cut pieces with block name and orientation','Cut a test corner and side block before batch cutting','Reserve all four 40″ floral strips before cutting accents','Use ¼″ seam allowance unless the tested pattern requires otherwise'].forEach(function(t,i){var label=el('label',{class:'checkrow'},box);var inp=el('input',{type:'checkbox'},label);inp.checked=!!state.cut['reminder'+i];inp.addEventListener('change',function(){state.cut['reminder'+i]=inp.checked;save();});el('span',{text:t},label);});}
-function renderSteps(){var box=document.getElementById('assemblyList');box.textContent='';steps.forEach(function(s,i){var lbl=el('label',{class:'checkrow'},box);var ch=el('input',{type:'checkbox'},lbl);ch.checked=!!state.steps[i];ch.addEventListener('change',function(){state.steps[i]=ch.checked;save();updateProgress();});el('span',{text:s},lbl);});updateProgress();}
-function updateProgress(){var n=steps.filter(function(v,i){return state.steps[i];}).length;document.getElementById('assemblyBar').style.width=n/steps.length*100+'%';document.getElementById('assemblyProgress').textContent=n+' of '+steps.length+' assembly steps complete';}
-function renderFabric(){var wrap=document.getElementById('budgetCards');wrap.textContent='';fabrics.forEach(function(f){var card=el('div',{class:'budget-card'},wrap);var label=el('label',{},card);var sw=el('span',{class:'swatch'},label);sw.style.background=f.swatch;el('span',{text:f.name},label);el('p',{text:f.desc,class:'small muted'},card);var line=el('div',{class:'inputs'},card);el('span',{text:'Plan: '+roundYd(f.estimate)},line);el('label',{text:'Purchased (yd):'},line);var inp=el('input',{type:'number',min:'0',step:'0.125',class:'input','aria-label':f.name+' purchased yards'},line);inp.value=state.purchased[f.id]===undefined?'0':String(state.purchased[f.id]);inp.addEventListener('input',function(){var v=Math.max(0,Number(inp.value)||0);state.purchased[f.id]=v;save();updateTotals();});var checked=el('label',{class:'small'},card);checked.style.marginTop='12px';var ck=el('input',{type:'checkbox'},checked);ck.checked=!!state.fabricChecked[f.id];ck.addEventListener('change',function(){state.fabricChecked[f.id]=ck.checked;save();});el('span',{text:' Purchased / set aside'},checked);});updateTotals();}
-function updateTotals(){document.getElementById('budgetTotal').textContent=roundYd(fabrics.reduce(function(a,f){return a+f.estimate;},0));document.getElementById('purchasedTotal').textContent=roundYd(fabrics.reduce(function(a,f){return a+(Number(state.purchased[f.id])||0);},0));}
-function renderDecisions(){var box=document.getElementById('decisions');box.textContent='';decisionList.forEach(function(v,i){var label=el('label',{class:'checkrow'},box);var ch=el('input',{type:'checkbox'},label);ch.checked=!!state.decisions[i];ch.addEventListener('change',function(){state.decisions[i]=ch.checked;save();});el('span',{text:v},label);});}
-var views=['overview','cuts','fabric','reference'];
-function showView(name){if(views.indexOf(name)<0)return;views.forEach(function(v){document.getElementById(v).hidden=v!==name;document.querySelector('[data-view="'+v+'"]').setAttribute('aria-selected',String(v===name));});window.scrollTo({top:0,behavior:'smooth'});}
-document.querySelectorAll('[data-view]').forEach(function(btn){btn.addEventListener('click',function(){showView(btn.dataset.view);});});
-document.querySelectorAll('[data-select]').forEach(function(btn){btn.addEventListener('click',function(){showView('overview');selectPart(btn.dataset.select);});});
-document.getElementById('showCuts').addEventListener('click',function(){showView('cuts');});
-var notes=document.getElementById('projectNotes');notes.value=state.notes||'';notes.addEventListener('input',function(){state.notes=notes.value;save();});
-document.getElementById('exportBtn').addEventListener('click',function(){var content=JSON.stringify({app:'QuiltStudio',project:'floral-medallion-001',version:1,exported:new Date().toISOString(),state:state},null,2);var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type:'application/json'}));a.download='quiltstudio-progress.json';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},100);});
-document.getElementById('importBtn').addEventListener('click',function(){document.getElementById('importFile').click();});
-document.getElementById('importFile').addEventListener('change',function(e){var f=e.target.files[0];if(!f)return;var reader=new FileReader();reader.onload=function(){try{var d=JSON.parse(reader.result);if(d.project!=='floral-medallion-001'||!d.state||typeof d.state!=='object')throw Error('Not a QuiltStudio project-001 backup');state=Object.assign({},defaults,d.state);['cut','steps','purchased','fabricChecked','decisions'].forEach(function(k){if(!state[k]||typeof state[k]!=='object')state[k]={};});notes.value=state.notes||'';save();renderCuts();renderSteps();renderFabric();renderDecisions();alert('Progress imported.');}catch(err){alert('Could not import: '+err.message);}e.target.value='';};reader.readAsText(f);});
-function rect(parent,x,y,w,h,fill,extra){return svg('rect',Object.assign({x:x,y:y,width:w,height:h,fill:fill},extra||{}),parent);}
-function poly(parent,pts,fill){svg('polygon',{points:pts,fill:fill},parent);}
-function group(parent,kind,label){var g=svg('g',{class:'map-region',tabindex:'0',role:'button','aria-label':label,'data-kind':kind},parent);g.addEventListener('click',function(){selectPart(kind);});g.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();selectPart(kind);}});return g;}
-function renderMap(){
-var root=document.getElementById('quilt-map');root.textContent='';
-var defs=svg('defs',{},root);var pat=svg('pattern',{id:'floral',patternUnits:'userSpaceOnUse',width:'72',height:'72'},defs);rect(pat,0,0,72,72,'#1049bd');[['#ecf51a',19,12],['#ebf44f',63,37],['#ffcad1',41,49],['#fff',39,46],['#d82d49',36,43]].forEach(function(v){svg('circle',{cx:v[1],cy:v[2],r:v[0]==='#ecf51a'?7:5,fill:v[0]},pat);});poly(pat,'19,3 23,13 14,19 10,10','#b8e329');poly(pat,'59,8 64,19 54,22 49,13','#d3e522');poly(pat,'43,36 49,41 46,49 39,46','#e9425d');
-rect(root,0,0,480,480,'#171717');
-rect(root,5,5,470,470,'url(#floral)');
-var positions=[42.5,137.5,342.5,437.5];
-function corner(x,y,rotate){var g=group(root,'corner','Corner patchwork block');var t=svg('g',{transform:'translate('+x+' '+y+') rotate('+rotate+' 47.5 47.5)'},g);rect(t,0,0,95,95,'#f7edd9');rect(t,0,0,24,24,'#61291b');rect(t,71,0,24,24,'#61291b');rect(t,0,71,24,24,'#61291b');rect(t,71,71,24,24,'#61291b');poly(t,'24,0 47.5,25 71,0','url(#floral)');poly(t,'24,95 47.5,70 71,95','url(#floral)');poly(t,'0,24 25,47.5 0,71','url(#floral)');poly(t,'95,24 70,47.5 95,71','url(#floral)');var squares=[[24,24],[47.5,24],[71,24],[24,47.5],[47.5,47.5],[71,47.5],[24,71],[47.5,71],[71,71]];squares.forEach(function(s,i){if(i%2===0)rect(t,s[0],s[1],23.5,23.5,'#171717');});rect(t,0,0,95,95,'none',{class:'click-area',stroke:'transparent','stroke-width':1});}
-function side(x,y,rot){var g=group(root,'side','Rectangular side patchwork block');var t=svg('g',{transform:'translate('+x+' '+y+') rotate('+rot+' '+(rot?47.5:102.5)+' '+(rot?102.5:47.5)+')'},g);if(rot){t.setAttribute('transform','translate('+x+' '+y+') rotate(90 47.5 102.5) translate(-55 55)');}
-rect(t,0,0,205,95,'#f7edd9');poly(t,'0,0 67,0 67,95','#61291b');poly(t,'138,0 205,0 138,95','#61291b');poly(t,'0,95 0,0 67,95','#61291b');poly(t,'205,95 205,0 138,95','#61291b');for(var r=0;r<2;r++)for(var c=0;c<2;c++)rect(t,76+c*26.5,21+r*26.5,26.5,26.5,(r+c)%2===0?'#171717':'#f7edd9');rect(t,0,0,205,95,'none',{class:'click-area',stroke:'transparent'});}
-function horizontalSide(x,y,rotate){var g=group(root,'side','Side block');var t=svg('g',{transform:'translate('+x+' '+y+')'+(rotate?' rotate(180 102.5 47.5)':'')},g);rect(t,0,0,205,95,'#f7edd9');poly(t,'0,0 55,0 55,95','#61291b');poly(t,'0,95 55,95 55,0','#61291b');poly(t,'205,0 150,0 150,95','#61291b');poly(t,'205,95 150,95 150,0','#61291b');for(var r=0;r<2;r++)for(var c=0;c<2;c++)rect(t,77+c*25.5,22+r*25.5,25.5,25.5,(r+c)%2===0?'#171717':'#f7edd9');rect(t,0,0,205,95,'none',{class:'click-area',stroke:'transparent'});}
-function verticalSide(x,y,rotate){var g=group(root,'side','Side block, rotated');var t=svg('g',{transform:'translate('+x+' '+y+') rotate('+(rotate?90:-90)+' 47.5 102.5) translate(-55 55)'},g);rect(t,0,0,205,95,'#f7edd9');poly(t,'0,0 55,0 55,95','#61291b');poly(t,'0,95 55,95 55,0','#61291b');poly(t,'205,0 150,0 150,95','#61291b');poly(t,'205,95 150,95 150,0','#61291b');for(var r=0;r<2;r++)for(var c=0;c<2;c++)rect(t,77+c*25.5,22+r*25.5,25.5,25.5,(r+c)%2===0?'#171717':'#f7edd9');rect(t,0,0,205,95,'none',{class:'click-area',stroke:'transparent'});}
-corner(42.5,42.5,0);corner(342.5,42.5,90);corner(42.5,342.5,270);corner(342.5,342.5,180);
-horizontalSide(137.5,42.5,false);horizontalSide(137.5,342.5,true);verticalSide(42.5,137.5,false);verticalSide(342.5,137.5,true);
-var sg=group(root,'star','Central eight-point star');var st=svg('g',{transform:'translate(137.5 137.5)'},sg);rect(st,0,0,205,205,'url(#floral)');
-poly(st,'68,0 102.5,41 137,0 137,68 205,68 164,102.5 205,137 137,137 137,205 102.5,164 68,205 68,137 0,137 41,102.5 0,68 68,68','#61291b');
-rect(st,51,51,103,103,'#f7edd9');for(var r=0;r<4;r++)for(var c=0;c<4;c++)rect(st,51+c*25.75,51+r*25.75,25.75,25.75,(r+c)%2===0?'#171717':'#f7edd9');rect(st,0,0,205,205,'none',{class:'click-area',stroke:'transparent'});
-var strips=[[42.5,5,395,37.5],[42.5,437.5,395,37.5],[5,42.5,37.5,395],[437.5,42.5,37.5,395]];strips.forEach(function(q){var g=group(root,'strip','Blue floral strip');rect(g,q[0],q[1],q[2],q[3],'url(#floral)',{class:'click-area',stroke:'transparent'});});
-[[5,5],[437.5,5],[5,437.5],[437.5,437.5]].forEach(function(v){var g=group(root,'floralSquare','Separate blue floral square');rect(g,v[0],v[1],37.5,37.5,'url(#floral)',{class:'click-area',stroke:'transparent'});});
-var bg=group(root,'checker','Black and cream pieced outer checkerboard border');for(var i=0;i<96;i++){rect(bg,i*5,0,5,5,i%2?'#171717':'#f7edd9');rect(bg,i*5,475,5,5,i%2?'#f7edd9':'#171717');}
-for(var j=1;j<95;j++){rect(bg,0,j*5,5,5,j%2?'#f7edd9':'#171717');rect(bg,475,j*5,5,5,j%2?'#171717':'#f7edd9');}rect(bg,0,0,480,480,'none',{class:'click-area',stroke:'transparent'});
+const KEY = 'quiltstudio.v2';
+
+let P = load();
+function load() {
+  try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.p) return { ...DEFAULTS, ...s.p, colors: { ...DEFAULTS.colors, ...(s.p.colors || {}) } }; } catch (e) {}
+  return structuredClone(DEFAULTS);
 }
-renderMap();renderCuts();renderSteps();renderFabric();renderDecisions();selectPart('star');
-})();
+function loadDone() { try { return new Set(JSON.parse(localStorage.getItem(KEY))?.done || []); } catch (e) { return new Set(); } }
+let DONE = loadDone();
+function save() { try { localStorage.setItem(KEY, JSON.stringify({ p: P, done: [...DONE] })); } catch (e) {} }
+
+/* ---------- helpers ---------- */
+const sum = (arr, from = 0, n = arr.length) => arr.slice(from, from + n).reduce((x, y) => x + y, 0);
+const EIGHTHS = ['', '⅛', '¼', '⅜', '½', '⅝', '¾', '⅞'];
+function fmt(x) {
+  const e = Math.round(x * 8);
+  if (Math.abs(e / 8 - x) > 1e-6) return (+x.toFixed(3)) + '″';
+  const w = Math.floor(e / 8), f = e % 8;
+  return (w ? w : (f ? '' : '0')) + EIGHTHS[f] + '″';
+}
+const dim = (w, h) => `${fmt(w)} × ${fmt(h)}`;
+const sw = f => `<span class="swatch fab-${f}"></span>`;
+
+const solid = (f, name) => ({ t: 'solid', f, name });
+const split = (A, B, corner) => ({ t: 'split', A, B, corner });
+const goose = (g, w, dir) => ({ t: 'goose', g, w, dir });
+const check = (n, A, B) => ({ t: 'check', n, A, B });
+const cell = (x, y, fill, cs = 1, rs = 1) => ({ x, y, fill, cs, rs });
+
+/* ---------- block definitions ---------- */
+const cornerSize = () => 2 * P.a + P.c;
+const starSize = () => 2 * P.s + P.S;
+const splitW = () => (starSize() - P.c) / 4;
+const topSize = () => 2 * cornerSize() + starSize() + 2 * P.b;
+
+function cornerBlock() {
+  const { a, c } = P, G = d => goose('floral', 'cream', d), B = solid('brown', 'corner square');
+  return { id: 'corner', name: 'Corner block', cols: [a, c, a], rows: [a, c, a], cells: [
+    cell(0, 0, B), cell(1, 0, G('down')), cell(2, 0, B),
+    cell(0, 1, G('right')), cell(1, 1, check(3, 'black', 'cream')), cell(2, 1, G('left')),
+    cell(0, 2, B), cell(1, 2, G('up')), cell(2, 2, B),
+  ]};
+}
+function sideBlock() {
+  const { a, c } = P, w = splitW(), band = solid('floral', 'side-block band');
+  return { id: 'side', name: 'Side block', cols: [w, w, c, w, w], rows: [a, c, a], cells: [
+    cell(0, 0, band, 5, 1),
+    cell(0, 1, split('cream', 'brown', 'bl')), cell(1, 1, split('cream', 'brown', 'bl')),
+    cell(2, 1, check(3, 'black', 'cream')),
+    cell(3, 1, split('cream', 'brown', 'br')), cell(4, 1, split('cream', 'brown', 'br')),
+    cell(0, 2, band, 5, 1),
+  ]};
+}
+function starBlock() {
+  const { s, S } = P, G = d => goose('floral', 'brown', d), F = solid('floral', 'star background square');
+  return { id: 'star', name: 'Center star', cols: [s, S, s], rows: [s, S, s], cells: [
+    cell(0, 0, F), cell(1, 0, G('down')), cell(2, 0, F),
+    cell(0, 1, G('right')), cell(1, 1, check(4, 'black', 'cream')), cell(2, 1, G('left')),
+    cell(0, 2, F), cell(1, 2, G('up')), cell(2, 2, F),
+  ]};
+}
+
+/* rotate a block 90° clockwise, `times` times */
+const ROT_CORNER = { tl: 'tr', tr: 'br', br: 'bl', bl: 'tl' };
+const ROT_DIR = { up: 'right', right: 'down', down: 'left', left: 'up' };
+function rotFill(f) {
+  if (f.t === 'split') return { ...f, corner: ROT_CORNER[f.corner] };
+  if (f.t === 'goose') return { ...f, dir: ROT_DIR[f.dir] };
+  if (f.t === 'check' && f.n % 2 === 0) return { ...f, A: f.B, B: f.A };
+  return f;
+}
+function rot(b, times) {
+  for (let i = 0; i < times; i++) {
+    const H = b.rows.length;
+    b = { ...b, cols: b.rows.slice().reverse(), rows: b.cols.slice(),
+      cells: b.cells.map(k => ({ x: H - k.y - k.rs, y: k.x, cs: k.rs, rs: k.cs, fill: rotFill(k.fill) })) };
+  }
+  return b;
+}
+
+function quiltLayout() {
+  const K = cornerSize(), T = starSize(), b = P.b;
+  const C = cornerBlock(), Sd = sideBlock(), St = starBlock();
+  const B = (blk, r) => ({ t: 'block', block: rot(blk, r) });
+  const strip = solid('floral', 'border strip'), sq = solid('floral', 'border end square');
+  return { id: 'quilt', cols: [b, K, T, K, b], rows: [b, K, T, K, b], cells: [
+    cell(0, 0, sq), cell(1, 0, strip, 3, 1), cell(4, 0, sq),
+    cell(0, 1, strip, 1, 3), cell(4, 1, strip, 1, 3),
+    cell(0, 4, sq), cell(1, 4, strip, 3, 1), cell(4, 4, sq),
+    cell(1, 1, B(C, 0)), cell(2, 1, B(Sd, 0)), cell(3, 1, B(C, 1)),
+    cell(1, 2, B(Sd, 3)), cell(2, 2, B(St, 0)), cell(3, 2, B(Sd, 1)),
+    cell(1, 3, B(C, 3)), cell(2, 3, B(Sd, 2)), cell(3, 3, B(C, 2)),
+  ]};
+}
+
+/* ---------- rendering (pure CSS shapes) ---------- */
+const CLIP_SPLIT = { tl: '0 0,100% 0,0 100%', tr: '0 0,100% 0,100% 100%', br: '100% 0,100% 100%,0 100%', bl: '0 0,100% 100%,0 100%' };
+const CLIP_GOOSE = { down: '0 0,100% 0,50% 100%', up: '0 100%,100% 100%,50% 0', left: '100% 0,100% 100%,0 50%', right: '0 0,0 100%,100% 50%' };
+
+function renderGrid(b, el) {
+  el.classList.add('g');
+  el.style.gridTemplateColumns = b.cols.map(v => v + 'fr').join(' ');
+  el.style.gridTemplateRows = b.rows.map(v => v + 'fr').join(' ');
+  for (const k of b.cells) {
+    const d = document.createElement('div');
+    d.className = 'c';
+    d.style.gridColumn = `${k.x + 1} / span ${k.cs}`;
+    d.style.gridRow = `${k.y + 1} / span ${k.rs}`;
+    renderFill(k.fill, d);
+    el.append(d);
+  }
+  return el;
+}
+function renderFill(f, d) {
+  if (f.t === 'block') { d.classList.add('blk'); renderGrid(f.block, d); return; }
+  d.classList.add('leaf');
+  if (f.t === 'solid') d.classList.add('fab-' + f.f);
+  if (f.t === 'split' || f.t === 'goose') {
+    const under = f.t === 'split' ? f.B : f.w, over = f.t === 'split' ? f.A : f.g;
+    d.classList.add('fab-' + under);
+    const i = document.createElement('i');
+    i.className = 'fab-' + over;
+    i.style.clipPath = `polygon(${f.t === 'split' ? CLIP_SPLIT[f.corner] : CLIP_GOOSE[f.dir]})`;
+    d.append(i);
+  }
+  if (f.t === 'check') {
+    const t = 200 / f.n;
+    d.style.background = `repeating-conic-gradient(var(--${f.B}) 0 25%, var(--${f.A}) 0 50%) 0 0 / ${t}% ${t}%`;
+  }
+}
+function renderBlockArt(b, cls = '') {
+  const el = document.createElement('div');
+  el.className = 'art ' + cls;
+  el.style.aspectRatio = `${sum(b.cols)} / ${sum(b.rows)}`;
+  return renderGrid(b, el);
+}
+
+/* ---------- counting units ---------- */
+const k4 = x => x.toFixed(4);
+function collect(b, out = { units: {}, blocks: {} }) {
+  for (const k of b.cells) {
+    const w = sum(b.cols, k.x, k.cs), h = sum(b.rows, k.y, k.rs), f = k.fill;
+    if (f.t === 'block') { out.blocks[f.block.id] = (out.blocks[f.block.id] || 0) + 1; collect(f.block, out); continue; }
+    const L = Math.max(w, h), S = Math.min(w, h);
+    let key, u;
+    if (f.t === 'solid') { key = `solid|${f.f}|${f.name}|${k4(L)}|${k4(S)}`; u = { t: 'solid', f: f.f, name: f.name, w: L, h: S }; }
+    if (f.t === 'split') { key = `split|${[f.A, f.B].sort()}|${k4(L)}|${k4(S)}`; u = { t: 'split', A: f.A, B: f.B, w: L, h: S }; }
+    if (f.t === 'goose') { key = `goose|${f.g}|${f.w}|${k4(L)}|${k4(S)}`; u = { t: 'goose', g: f.g, wing: f.w, w: L, h: S }; }
+    if (f.t === 'check') { key = `check|${f.n}|${[f.A, f.B].sort()}|${k4(w)}`; u = { t: 'check', n: f.n, A: f.A, B: f.B, w, h }; }
+    (out.units[key] ||= { ...u, qty: 0 }).qty++;
+  }
+  return out;
+}
+const isSquare = u => Math.abs(u.w - u.h) < 1e-6;
+const is2to1 = u => Math.abs(u.w - 2 * u.h) < 1e-6;
+const checkCounts = u => { const n2 = u.n * u.n; return [Math.ceil(n2 / 2), Math.floor(n2 / 2)]; };
+
+function describe(u) {
+  if (u.t === 'solid') return `${sw(u.f)}${cap(u.name)} — ${dim(u.w, u.h)}`;
+  if (u.t === 'split') return `${sw(u.A)}${sw(u.B)}${isSquare(u) ? 'Half-square triangle' : 'Half-rectangle triangle'} (${FABRICS[u.A].toLowerCase()}/${FABRICS[u.B].toLowerCase()}) — ${dim(u.w, u.h)}`;
+  if (u.t === 'goose') return `${sw(u.g)}${sw(u.wing)}Flying goose (${FABRICS[u.g].toLowerCase()} goose, ${FABRICS[u.wing].toLowerCase()} wings) — ${dim(u.w, u.h)}`;
+  if (u.t === 'check') { const [a, b] = checkCounts(u); return `${sw(u.A)}${sw(u.B)}${u.n}×${u.n} checkerboard — ${fmt(u.w)} square (${a} ${FABRICS[u.A].toLowerCase()} + ${b} ${FABRICS[u.B].toLowerCase()}, ${fmt(u.w / u.n)} each)`; }
+}
+const cap = s => s[0].toUpperCase() + s.slice(1);
+
+/* ---------- cutting ---------- */
+function cutsFor(u, warn) {
+  const s2 = 2 * P.seam, out = [];
+  if (u.t === 'solid') out.push({ f: u.f, w: u.w + s2, h: u.h + s2, qty: u.qty, what: u.name });
+  if (u.t === 'goose') {
+    out.push({ f: u.g, w: u.w + s2, h: u.h + s2, qty: u.qty, what: `goose rectangles (${dim(u.w, u.h)} geese)` });
+    out.push({ f: u.wing, w: u.h + s2, h: u.h + s2, qty: u.qty * 2, what: `wing squares, stitch-and-flip (${dim(u.w, u.h)} geese)` });
+    if (!is2to1(u)) warn.push(`Geese ${dim(u.w, u.h)} are not 2:1, so stitch-and-flip won't give sharp points. Make the long side exactly twice the short side, or plan to paper-piece them.`);
+  }
+  if (u.t === 'split') {
+    if (isSquare(u)) {
+      const n = Math.ceil(u.qty / 2), z = u.w + 1;
+      for (const f of [u.A, u.B]) out.push({ f, w: z, h: z, qty: n, what: `HST squares — 2-at-a-time, trim to ${fmt(u.w + s2)}` });
+    } else {
+      for (const f of [u.A, u.B]) out.push({ f, w: u.w + 1, h: u.h + 1, qty: u.qty, what: `HRT rectangles, oversized — trim to ${dim(u.w + s2, u.h + s2)}` });
+      warn.push(`The ${dim(u.w, u.h)} triangle units aren't square, so they're half-rectangle triangles. Use an HRT ruler or paper-piece them. Fabric is budgeted generously (one oversized rectangle of each fabric per unit).`);
+    }
+  }
+  if (u.t === 'check') {
+    const [a, b] = checkCounts(u), z = u.w / u.n + s2;
+    out.push({ f: u.A, w: z, h: z, qty: a * u.qty, what: `squares for ${u.n}×${u.n} checkerboards` });
+    out.push({ f: u.B, w: z, h: z, qty: b * u.qty, what: `squares for ${u.n}×${u.n} checkerboards` });
+  }
+  return out;
+}
+
+/* strip-cut each size across the width of fabric; pick the orientation that uses the least length */
+function stripInches(c) {
+  const opt = (w, h) => { const per = Math.floor(P.wof / w); return per > 0 ? Math.ceil(c.qty / per) * h : Infinity; };
+  const across = Math.min(opt(c.w, c.h), opt(c.h, c.w));
+  if (across !== Infinity) return { inches: across, lengthwise: false };
+  const L = Math.max(c.w, c.h), per = Math.max(1, Math.floor(P.wof / Math.min(c.w, c.h)));
+  return { inches: Math.ceil(c.qty / per) * L, lengthwise: true };
+}
+const toYards = inches => Math.max(0.25, Math.ceil((inches * 1.1) / 36 * 8) / 8);
+function yd(y) { const w = Math.floor(y), f = Math.round((y - w) * 8); return (w || (f ? '' : '0')) + (f ? EIGHTHS[f] : '') + ' yd'; }
+
+/* ---------- page ---------- */
+function buildControls() {
+  document.getElementById('controls').innerHTML = PARAMS.map(([k, label, hint]) =>
+    `<label class="field"><span>${label}${hint ? `<small>${hint}</small>` : ''}</span>
+     <input type="number" step="0.125" min="0.125" data-k="${k}" value="${P[k]}"></label>`).join('');
+  document.getElementById('colors').innerHTML = Object.entries(FABRICS).map(([k, label]) =>
+    `<label class="field"><span>${label}</span><input type="color" data-c="${k}" value="${P.colors[k]}"></label>`).join('');
+  document.querySelectorAll('[data-k]').forEach(i => i.addEventListener('input', () => {
+    const v = parseFloat(i.value); if (v > 0) { P[i.dataset.k] = v; save(); render(); }
+  }));
+  document.querySelectorAll('[data-c]').forEach(i => i.addEventListener('input', () => {
+    P.colors[i.dataset.c] = i.value; save(); applyColors();
+  }));
+}
+function applyColors() { for (const [k, v] of Object.entries(P.colors)) document.documentElement.style.setProperty('--' + k, v); }
+
+function render() {
+  const Q = topSize(), K = cornerSize(), T = starSize();
+  const bindIn = 0.375;
+  document.getElementById('summary').innerHTML =
+    `Finished quilt <b>${dim(Q, Q)}</b> · checkerboard binding (purchased) on the edge`;
+  document.getElementById('derived').innerHTML = `
+    <div><span>Corner block</span><b>${dim(K, K)}</b></div>
+    <div><span>Side block</span><b>${dim(T, K)}</b></div>
+    <div><span>Center star</span><b>${dim(T, T)}</b></div>
+    <div><span>Center (3 × 3 blocks)</span><b>${dim(2 * K + T, 2 * K + T)}</b></div>
+    <div><span>Whole top</span><b>${dim(Q, Q)}</b></div>`;
+
+  // mockup
+  const wrap = document.getElementById('bindingWrap');
+  wrap.style.padding = (bindIn / (Q + 2 * bindIn) * 100) + '%';
+  const q = document.getElementById('quilt');
+  q.replaceChildren(); q.className = ''; q.style.aspectRatio = '1 / 1';
+  const layout = quiltLayout();
+  renderGrid(layout, q);
+  document.getElementById('mock').classList.toggle('seams', document.getElementById('seams').checked);
+
+  const all = collect(layout);
+  const warn = [];
+
+  // blocks
+  const defs = [cornerBlock(), sideBlock(), starBlock()];
+  const blocksEl = document.getElementById('blocks');
+  blocksEl.replaceChildren();
+  for (const b of defs) {
+    const card = document.createElement('div');
+    card.className = 'blockcard seams';
+    card.innerHTML = `<h3>${b.name} <span class="tag">make ${all.blocks[b.id] || 0}</span></h3>
+      <div class="muted">${dim(sum(b.cols), sum(b.rows))} finished · grid ${b.cols.map(fmt).join(' / ')} by ${b.rows.map(fmt).join(' / ')}</div>`;
+    card.append(renderBlockArt(b, b.id === 'side' ? 'wide' : ''));
+    const units = Object.values(collect(b).units);
+    const ul = document.createElement('ul'); ul.className = 'units';
+    ul.innerHTML = units.map(u => `<li>${u.qty} × ${describe(u)}</li>`).join('');
+    card.append(document.createElement('div'));
+    card.lastChild.innerHTML = '<div class="muted" style="margin-bottom:4px">Per block:</div>';
+    card.append(ul);
+    blocksEl.append(card);
+  }
+
+  // cuts + yardage
+  const cuts = [];
+  for (const u of Object.values(all.units)) cuts.push(...cutsFor(u, warn));
+  const byFab = {};
+  for (const c of cuts) {
+    const key = `${c.f}|${k4(Math.max(c.w, c.h))}|${k4(Math.min(c.w, c.h))}|${c.what}`;
+    const m = (byFab[c.f] ||= {});
+    if (m[key]) m[key].qty += c.qty; else m[key] = { ...c, w: Math.max(c.w, c.h), h: Math.min(c.w, c.h) };
+  }
+  let cutHtml = '', yardHtml = '', anyLengthwise = false;
+  for (const f of Object.keys(FABRICS)) {
+    const list = Object.values(byFab[f] || {}).sort((x, y) => y.w * y.h - x.w * x.h);
+    if (!list.length) continue;
+    let inches = 0;
+    const rows = list.map(c => { const s = stripInches(c); inches += s.inches; anyLengthwise ||= s.lengthwise;
+      return `<tr><td class="n">${c.qty}</td><td>${dim(c.w, c.h)}</td><td>${c.what}${s.lengthwise ? ' <span class="tag">cut lengthwise</span>' : ''}</td></tr>`; }).join('');
+    cutHtml += `<h3 style="margin-top:14px">${sw(f)}${FABRICS[f]}</h3>
+      <table><thead><tr><th class="n">Qty</th><th>Cut size</th><th>For</th></tr></thead><tbody>${rows}</tbody></table>`;
+    yardHtml += `<div class="panel"><div>${sw(f)}${FABRICS[f]}</div><div class="yard">${yd(toYards(inches))}</div>
+      <div class="muted">${fmt(inches)} of strips</div></div>`;
+  }
+  const finW = Q + 8, panels = Math.ceil(finW / (P.wof - 2));
+  const backing = Math.ceil(panels * finW / 36 * 8) / 8;
+  const bindLen = 4 * Q + 12;
+  yardHtml += `<div class="panel"><div>Backing</div><div class="yard">${yd(backing)}</div><div class="muted">${panels} width${panels > 1 ? 's' : ''} × ${fmt(finW)}, seamed</div></div>
+    <div class="panel"><div>Batting</div><div class="yard">${dim(finW, finW)}</div><div class="muted">4″ extra all round</div></div>
+    <div class="panel"><div>Checker binding</div><div class="yard">${yd(Math.ceil(bindLen / 36 * 8) / 8)}</div><div class="muted">${fmt(bindLen)} long (perimeter + 12″)</div></div>`;
+  document.getElementById('yardage').innerHTML = yardHtml;
+  document.getElementById('yardnote').textContent =
+    `Quilt-top fabrics assume strips cut across a ${fmt(P.wof)} usable width, plus 10% for shrinkage and mistakes, rounded up to the nearest ⅛ yard.` +
+    (anyLengthwise ? ' Some pieces are longer than the fabric width; they are counted as cut along the length.' : '');
+  document.getElementById('cuts').innerHTML = cutHtml;
+
+  document.getElementById('warnings').innerHTML = [...new Set(warn)].map(w => `<div class="warn">${w}</div>`).join('');
+
+  renderSteps(all, Q, finW, bindLen);
+}
+
+function renderSteps(all, Q, finW, bindLen) {
+  const U = Object.values(all.units);
+  const n = (pred) => U.filter(pred).reduce((t, u) => t + u.qty, 0);
+  const nine = n(u => u.t === 'check' && u.n === 3), big = n(u => u.t === 'check' && u.n === 4);
+  const cg = U.find(u => u.t === 'goose' && u.wing === 'cream'), sg = U.find(u => u.t === 'goose' && u.wing === 'brown');
+  const hr = U.find(u => u.t === 'split');
+  const steps = [
+    ['Prep', 'Prewash (optional) and press all fabric.'],
+    ['Cut', 'Cut every piece in the cut list. Label the piles by size.'],
+    ['Units', `Sew ${nine} nine-patches (${fmt(P.c)} finished), black in the corners and center.`],
+    ['Units', `Sew ${big} 4 × 4 checkerboard (${fmt(P.S)} finished) for the star center.`],
+    ['Units', `Make ${cg?.qty || 0} cream-wing flying geese (${cg ? dim(cg.w, cg.h) : ''}) for the corner blocks.`],
+    ['Units', `Make ${sg?.qty || 0} brown-wing flying geese (${sg ? dim(sg.w, sg.h) : ''}): the star points.`],
+    ['Units', `Make ${hr?.qty || 0} cream/brown triangle units (${hr ? dim(hr.w, hr.h) : ''}), half of them mirror images. Trim to size.`],
+    ['Blocks', `Corner blocks ×${all.blocks.corner}: sew 3 rows (brown, goose, brown / goose, nine-patch, goose / brown, goose, brown), then join the rows. Geese point toward the center.`],
+    ['Blocks', `Side blocks ×${all.blocks.side}: sew the middle row (2 triangle units, nine-patch, 2 mirrored units), then add a floral band above and below.`],
+    ['Blocks', 'Center star: sew 3 rows (floral, goose, floral / goose, checkerboard, goose / floral, goose, floral), then join.'],
+    ['Center', 'Lay out the 3 × 3 blocks: corners in the corners, side blocks turned so their floral bands run parallel to the outer edge, star in the middle. Sew 3 rows, then join the rows.'],
+    ['Border', `Sew a floral border strip to the left and right sides.`],
+    ['Border', `Sew a ${fmt(P.b)} floral square to each end of the other two strips, then sew them to the top and bottom. The top should measure ${dim(Q + 2 * P.seam, Q + 2 * P.seam)} unfinished.`],
+    ['Finish', `Layer backing (${dim(finW, finW)}), batting, and top. Baste and quilt.`],
+    ['Finish', `Trim, then bind with the checkerboard binding (${fmt(bindLen)}).`],
+  ];
+  const ol = document.getElementById('steps');
+  ol.innerHTML = steps.map(([phase, text], i) => {
+    const id = 's' + i + phase;
+    return `<li><label><input type="checkbox" data-step="${id}" ${DONE.has(id) ? 'checked' : ''}> <span><span class="phase">${phase}.</span> ${text}</span></label></li>`;
+  }).join('');
+  ol.querySelectorAll('[data-step]').forEach(cb => cb.addEventListener('change', () => {
+    cb.checked ? DONE.add(cb.dataset.step) : DONE.delete(cb.dataset.step); save();
+  }));
+}
+
+document.getElementById('seams').addEventListener('change', render);
+document.getElementById('reset').addEventListener('click', () => { P = structuredClone(DEFAULTS); save(); buildControls(); applyColors(); render(); });
+buildControls(); applyColors(); render();
 </script>
-</body></html>
+</body>
+</html>

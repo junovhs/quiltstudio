@@ -13,10 +13,10 @@ These are the six images the user shared in this ChatGPT conversation, in conver
 
 ## Approved visual facts
 
-- The overall design is symmetric, geometric and approximately 48 inches square including the outside pieced checkerboard.
+- The overall design is symmetric, geometric and about 47 inches square; the checkerboard edge is binding.
 - **Four** corner blocks, **four** side blocks, **one** central star block.
 - **Four same-size** blue floral strips plus **four separately pieced blue floral squares** at the ends of two of those strips.
-- **The black-and-cream checkerboard, including the narrow outer border, is pieced from solid fabrics.** Do not shop for checkerboard-print yardage.
+- The interior black/cream checkerboards are pieced from solid fabrics. **The narrow outer checkerboard edge is purchased checkerboard binding fabric**, already bought.
 
 ## Fidelity and to-do
 

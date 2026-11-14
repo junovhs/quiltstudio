@@ -1,7 +1,9 @@
 # QuiltStudio
 
-A GitHub Pages-ready planner for the 48 × 48 inch floral medallion quilt. This repository contains the living construction plan, fabric budget, cut list, and visual references.
+A planner for the floral medallion quilt. Open `index.html` in a browser (or publish it with
+GitHub Pages: Settings → Pages → Deploy from branch → main / root).
 
-Open `index.html` in a browser, or configure **Settings → Pages → Deploy from a branch → main / (root)** to publish it.
+Change the sizes on the left; the mockup, block breakdown, fabric yardage, cut list and sewing
+order all update. Sizes, colors and checked-off steps are saved in your browser.
 
-The initial measurements are planning estimates, not validated cutting instructions. See `PROJECT.md` for assumptions, open decisions, and counts. Progress in the planner is saved in your browser only; export JSON for a portable backup.
+Design decisions live in `PROJECT.md`.
