@@ -16,3 +16,7 @@ npm run deploy    # build + deploy to Cloudflare Pages (project "quiltstudio")
 Stack: Svelte 5 + TypeScript + Vite, modern CSS (container queries, anchor positioning,
 popover API, view transitions, oklch/light-dark, @property). Designs save in the browser;
 fabric photos are stored in IndexedDB. Export/import from the ⚙ menu.
+
+Auto-deploy: commits on `main` deploy automatically via a local git hook
+(`scripts/autodeploy.sh`, log in `.wrangler/deploy.log`). On a fresh clone, enable it with
+`ln -s ../../scripts/autodeploy.sh .git/hooks/post-commit`.
