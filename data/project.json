@@ -1,0 +1,157 @@
+{
+  "project_id": "floral-medallion-001",
+  "project_name": "Floral Medallion Quilt",
+  "captured_date": "2026-11-14",
+  "status": "planning",
+  "target": {
+    "finished_width_in": 48,
+    "finished_height_in": 48,
+    "includes_checkerboard_outer_border": true,
+    "seam_allowance_in": 0.25
+  },
+  "palette": [
+    "royal blue floral",
+    "chocolate brown",
+    "cream",
+    "black"
+  ],
+  "source_references": [
+    "image(20261114-223342).png",
+    "image(20261114-223403).png",
+    "image(20261114-223621).png",
+    "image(20261114-223704).png",
+    "image(20261114-223717).png",
+    "image(20261114-223813).png"
+  ],
+  "confirmed_decisions": [
+    "four identical floral main strips",
+    "four separately sewn floral corner squares",
+    "black/cream checkerboard is pieced from fabric, not print",
+    "entire design including outer checkerboard is 48 inches square"
+  ],
+  "dimensions_status": "provisional, subblock geometry not yet drafted",
+  "finished_sizes_in": {
+    "corner_block": [
+      9.5,
+      9.5
+    ],
+    "side_block": [
+      20.5,
+      9.5
+    ],
+    "central_star": [
+      20.5,
+      20.5
+    ],
+    "inner_nine_block_square": [
+      39.5,
+      39.5
+    ],
+    "floral_strip": [
+      39.5,
+      3.75
+    ],
+    "floral_square": [
+      3.75,
+      3.75
+    ],
+    "floral_framed_top": [
+      47,
+      47
+    ],
+    "outer_checkerboard_width": 0.5
+  },
+  "cut_units_in": [
+    {
+      "id": "corner",
+      "description": "corner block assembled unfinished envelope",
+      "quantity": 4,
+      "width": 10,
+      "height": 10,
+      "provisional": true
+    },
+    {
+      "id": "side",
+      "description": "side block assembled unfinished envelope",
+      "quantity": 4,
+      "width": 21,
+      "height": 10,
+      "provisional": true
+    },
+    {
+      "id": "star",
+      "description": "center star assembled unfinished envelope",
+      "quantity": 1,
+      "width": 21,
+      "height": 21,
+      "provisional": true
+    },
+    {
+      "id": "strip",
+      "description": "blue floral cross-width main strip",
+      "quantity": 4,
+      "width": 40,
+      "height": 4.25,
+      "provisional": true
+    },
+    {
+      "id": "floralSquare",
+      "description": "blue floral separate end square",
+      "quantity": 4,
+      "width": 4.25,
+      "height": 4.25,
+      "provisional": true
+    },
+    {
+      "id": "borderCream",
+      "description": "outer pieced checkerboard cream square",
+      "quantity": 190,
+      "width": 1,
+      "height": 1,
+      "provisional": true
+    },
+    {
+      "id": "borderBlack",
+      "description": "outer pieced checkerboard black square",
+      "quantity": 190,
+      "width": 1,
+      "height": 1,
+      "provisional": true
+    }
+  ],
+  "outer_checkerboard": {
+    "made_from_separate_fabric_squares": true,
+    "printed_checkerboard_fabric": false,
+    "finished_square_size_in": 0.5,
+    "cut_square_size_in": 1,
+    "conditional_piece_count": 380,
+    "black_piece_count": 190,
+    "cream_piece_count": 190,
+    "side_strip_count_each": 94,
+    "top_bottom_strip_count_each": 96,
+    "requires_confirmation": true
+  },
+  "fabric_budget_yards": {
+    "royal_blue_floral": 2,
+    "cream": 1,
+    "chocolate_brown": 1,
+    "black": 0.5,
+    "checkerboard_print": 0,
+    "total_quilt_top": 4.5
+  },
+  "finishing_estimates": {
+    "backing_regular_width_yards": 3.25,
+    "backing_108_in_width_yards": 1.667,
+    "batting_min_width_in": 56,
+    "batting_min_height_in": 56,
+    "separate_binding_yards": 0.5
+  },
+  "open_decisions": [
+    "exact corner, side and star subpiece cutting charts",
+    "checkerboard sizes and counts inside each block",
+    "outer border width practicality and corner continuity",
+    "fabric directionality / usable fabric width",
+    "binding and backing final materials"
+  ],
+  "notes": "All quantities and dimensions are a planning snapshot. Unit cutting sizes for complex blocks are unfinished assembly targets, not single fabric pieces."
+}
