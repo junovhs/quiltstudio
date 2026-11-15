@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { scale } from 'svelte/transition';
   import { backOut } from 'svelte/easing';
-  import { Undo2, Redo2, Scissors, Settings, House, ChevronRight, Grid3x3, Ban, FolderOpen, Printer, Wand2, TriangleAlert, Lock, LockOpen, Sparkles } from '@lucide/svelte';
+  import { Undo2, Redo2, Scissors, Settings, House, ChevronRight, Grid3x3, Ban, FolderOpen, Printer, Wand2, TriangleAlert, Lock, LockOpen, Dices } from '@lucide/svelte';
   import Canvas from './components/Canvas.svelte';
   import Palette from './components/Palette.svelte';
   import Swatches from './components/Swatches.svelte';
@@ -104,7 +104,7 @@
       {#if hereLocked}<Lock size={14} strokeWidth={2.6} />{:else}<LockOpen size={14} strokeWidth={2.2} />{/if}
     </button>
     <div class="spacer"></div>
-    <button class="ideasbtn" onclick={() => (ui.ideas = true)} title="Ideas: quilts made from your fabrics"><Sparkles size={17} /><span>Ideas</span></button>
+    <button class="ideasbtn" onclick={() => (ui.ideas = true)} title="Random quilt: generate quilts from your fabrics"><Dices size={17} /><span>Random quilt</span></button>
     <button class="icon" disabled={!app.canUndo} onclick={undo} title="Undo"><Undo2 size={19} /></button>
     <button class="icon" disabled={!app.canRedo} onclick={redo} title="Redo"><Redo2 size={19} /></button>
     <button class="icon seamsbtn" class:on={app.doc.settings.seams} title="Seams" onclick={() => edit(() => (app.doc.settings.seams = !app.doc.settings.seams))}><Grid3x3 size={19} /></button>

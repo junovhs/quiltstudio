@@ -1,77 +1,139 @@
 <script lang="ts">
   import { fly, scale } from 'svelte/transition';
   import { backOut, cubicOut } from 'svelte/easing';
-  import { X, Shuffle, Undo2, Check, Sparkles } from '@lucide/svelte';
+  import { X, Undo2, Check, Dices, Wand2, Ban } from '@lucide/svelte';
   import { app, newProject, setImage, ui } from '../lib/store.svelte';
-  import { buildIdea, freshIdea, vary, nameOf, type Idea } from '../lib/generate';
+  import { bestNine, buildIdea, freshIdea, vary, nameOf, score, DEFAULT_STEER, type Idea, type Steer } from '../lib/generate';
   import { thumbnail } from '../lib/render';
   import type { Doc } from '../lib/model';
   import { fmt } from '../lib/calc';
 
+  /* ---------- steering, remembered on this device ---------- */
+  const KEY = 'quiltstudio.steer';
+  let steer = $state<Steer>((() => { try { return { ...DEFAULT_STEER, ...JSON.parse(localStorage.getItem(KEY) ?? '{}') }; } catch { return { ...DEFAULT_STEER }; } })());
+  $effect(() => { try { localStorage.setItem(KEY, JSON.stringify(steer)); } catch {} });
+  const S = () => $state.snapshot(steer) as Steer;
+  const GROUPS = [
+    ['look', 'Blocks', [['classic', 'Classic'], ['mixed', 'Mixed'], ['new', 'Invented']]],
+    ['layout', 'Layout', [['any', 'Any'], ['grid', 'Blocks'], ['alternate', 'Alternating'], ['sashing', 'Sashing'], ['two', 'Two-block'], ['medallion', 'Medallion']]],
+    ['feel', 'Feel', [['calm', 'Calm'], ['balanced', 'Balanced'], ['bold', 'Bold']]],
+    ['size', 'Size', [['baby', 'Baby'], ['throw', 'Throw'], ['bed', 'Bed']]],
+  ] as const;
+  function set(k: (typeof GROUPS)[number][0], v: string) { (steer as unknown as Record<string, unknown>)[k] = v; void fresh(); }
+  function toggleFabric(id: string) {
+    steer.skip = steer.skip.includes(id) ? steer.skip.filter(f => f !== id) : [...steer.skip, id];
+    void fresh();
+  }
+  const fabrics = $derived(app.doc.fabrics.filter(f => f.id !== app.doc.settings.binding));
+
+  /* ---------- the nine ---------- */
   interface Card { idea: Idea; doc: Doc; img: string; w: number; h: number; key: string }
-  /* each step is nine cards; tapping one makes the next step from it */
-  // plain (not deep-reactive) data: whole designs, replaced a step at a time
   let steps = $state.raw<{ cards: Card[]; from: number | null }[]>([]);
   let busy = $state(false);
   const now = $derived(steps.at(-1));
-
   const source = () => $state.snapshot(app.doc) as Doc;
-  async function card(idea: Idea): Promise<Card> {
-    const doc = buildIdea(idea, source());
-    const r = doc.blocks[doc.root];
-    const w = r.cols.reduce((a, b) => a + b, 0), h = r.rows.reduce((a, b) => a + b, 0);
-    return { idea, doc, w, h, img: await thumbnail(doc, app.images, 420), key: Math.random().toString(36).slice(2) };
+  const sizeOf = (d: Doc) => { const r = d.blocks[d.root]; return { w: r.cols.reduce((a, b) => a + b, 0), h: r.rows.reduce((a, b) => a + b, 0) }; };
+  async function card(idea: Idea, doc: Doc): Promise<Card> {
+    return { idea, doc, ...sizeOf(doc), img: await thumbnail(doc, app.images, 420), key: Math.random().toString(36).slice(2) };
   }
-  async function show(ideas: Idea[], from: number | null) {
+  const tick = () => new Promise(r => setTimeout(r, 30));   // let the page show it's working
+  async function show(list: { i: Idea; d: Doc }[], from: number | null, replace = false) {
+    const cards = await Promise.all(list.map(x => card(x.i, x.d)));
+    steps = replace ? [{ cards, from }] : [...steps, { cards, from }];
+  }
+  async function fresh() {
+    if (busy) return;
     busy = true;
-    try { const cards = await Promise.all(ideas.map(card)); steps = [...steps, { cards, from }]; }
-    finally { busy = false; }
+    try {
+      await tick();
+      const doc = source(), s = S();
+      await show(bestNine(doc, s, () => freshIdea(doc, s)), null, true);
+    } finally { busy = false; }
   }
-  const fresh = () => show(Array.from({ length: 9 }, () => freshIdea(source())), null);
-  /** "more like this": the pick itself first, then eight variations */
-  function more(i: number) {
+  /** your pick first, then the eight best-looking variations that differ from it and each other */
+  async function more(i: number) {
     if (busy || !now) return;
-    const parent = now.cards[i].idea, doc = source();
-    // eight variations that each look different from the pick and from each other
-    const look = (x: Idea) => { const d = buildIdea(x, doc); return JSON.stringify([d.blocks.quilt, d.blocks.idea]); };
-    const seen = new Set([look(parent)]), kids: Idea[] = [];
-    for (let tries = 0; kids.length < 8 && tries < 60; tries++) {
-      const k = vary(parent, doc), l = look(k);
-      if (!seen.has(l)) { seen.add(l); kids.push(k); }
-    }
-    show([parent, ...kids], i);
+    busy = true;
+    try {
+      await tick();
+      const doc = source(), s = S(), parent = now.cards[i];
+      const look = (d: Doc) => JSON.stringify(Object.values(d.blocks).map(b => [b.cols, b.rows, b.cells]));
+      const seen = new Set([look(parent.doc)]), kids: { i: Idea; d: Doc; sc: number }[] = [];
+      for (let tries = 0; kids.length < 24 && tries < 80; tries++) {
+        const k = vary(parent.idea, doc, s), d = buildIdea(k, doc), l = look(d), sc = score(d, s.feel);
+        if (sc > -Infinity && !seen.has(l)) { seen.add(l); kids.push({ i: k, d, sc: sc + Math.random() * 0.12 }); }
+      }
+      kids.sort((a, b) => b.sc - a.sc);
+      await show([{ i: parent.idea, d: parent.doc }, ...kids.slice(0, 8)], i);
+    } finally { busy = false; }
   }
   function back() { if (steps.length > 1) steps = steps.slice(0, -1); }
 
-  async function use(c: Card) {
+  async function use(c: { idea: Idea; doc: Doc }) {
     const images = { ...app.images };
     newProject(structuredClone(c.doc), nameOf(c.idea));
-    // the fabric photos come along with the new quilt
     for (const [id, url] of Object.entries(images)) setImage(id, await (await fetch(url)).blob());
     ui.ideas = false;
   }
+  /** one tap: the single best of a fresh batch, straight into a new quilt */
+  async function surprise() {
+    if (busy) return;
+    busy = true;
+    try {
+      await tick();
+      const doc = source(), s = S();
+      const [best] = bestNine(doc, s, () => freshIdea(doc, s), 1, 24);
+      if (best) await use({ idea: best.i, doc: best.d });
+    } finally { busy = false; }
+  }
   const close = () => (ui.ideas = false);
-  const layoutName = { grid: 'side by side', alternate: 'with plain squares', sashing: 'with sashing' };
+  const LAYOUT: Record<Idea['layout'], string> = { grid: 'blocks', alternate: 'alternating', sashing: 'sashing', two: 'two-block', medallion: 'medallion' };
+  const BORDER: Record<string, string> = { sawtooth: 'sawtooth', geese: 'geese', hourglass: 'hourglass', checker: 'checkerboard', piano: 'piano keys', blocks: 'block' };
+  const pieced = (i: Idea) => [...new Set(i.borders.filter(b => b.kind !== 'plain').map(b => BORDER[b.kind]))].join(', ');
 
   $effect(() => { if (ui.ideas && !steps.length) void fresh(); });
 </script>
 
-<svelte:window onkeydown={e => { if (!ui.ideas) return; if (e.key === 'Escape') close(); if (e.key === 'Backspace' && !(e.target as HTMLElement).closest('input')) back(); }} />
+<svelte:window onkeydown={e => { if (ui.ideas && e.key === 'Escape') close(); }} />
 
 {#if ui.ideas}
-  <div class="ideas" transition:fly={{ y: 24, duration: 380, easing: cubicOut }} role="dialog" aria-modal="true" aria-label="Quilt ideas">
+  <div class="ideas" transition:fly={{ y: 24, duration: 380, easing: cubicOut }} role="dialog" aria-modal="true" aria-label="Random quilt">
     <header class="bar">
-      <span class="ic"><Sparkles size={20} /></span>
-      <h1>Ideas</h1>
-      <p class="tip">{steps.length > 1 ? `Step ${steps.length}: more like your pick. Keep picking until one feels right.` : 'Tap the one you like most, even a little. You’ll get nine more like it.'}</p>
-      <button class="ghost tb" onclick={back} disabled={steps.length < 2 || busy} title="Back a step"><Undo2 size={17} /> Back</button>
-      <button class="ghost tb" onclick={() => { steps = []; void fresh(); }} disabled={busy} title="Nine brand-new ideas"><Shuffle size={17} /> Start over</button>
+      <span class="ic"><Dices size={20} /></span>
+      <h1>Random quilt</h1>
+      <p class="tip">{steps.length > 1 ? `Step ${steps.length}: more like your pick.` : 'Tap the one you like most for nine more like it.'}</p>
+      <button class="ghost tb" onclick={back} disabled={steps.length < 2 || busy}><Undo2 size={17} /><span>Back</span></button>
+      <button class="ghost tb" onclick={surprise} disabled={busy} title="Make one quilt and open it"><Wand2 size={17} /><span>Surprise me</span></button>
+      <button class="gen" onclick={fresh} disabled={busy}><Dices size={17} /> Generate</button>
       <button class="icon" onclick={close} title="Close"><X size={20} /></button>
     </header>
 
+    <div class="steer">
+      {#each GROUPS as [k, label, opts]}
+        <div class="grp">
+          <span class="lbl">{label}</span>
+          <div class="seg">
+            {#each opts as [v, name]}
+              <button class:on={steer[k] === v} onclick={() => set(k, v)} disabled={busy}>{name}</button>
+            {/each}
+          </div>
+        </div>
+      {/each}
+      <div class="grp">
+        <span class="lbl">Fabrics</span>
+        <div class="fabs">
+          {#each fabrics as f (f.id)}
+            <button class="sw f-{f.id}" class:off={steer.skip.includes(f.id)} title="{steer.skip.includes(f.id) ? 'Use' : 'Leave out'} {f.name}" onclick={() => toggleFabric(f.id)} disabled={busy}>
+              {#if steer.skip.includes(f.id)}<Ban size={14} />{/if}
+            </button>
+          {/each}
+        </div>
+      </div>
+    </div>
+
     <div class="body">
       {#if now}
-        {#key steps.length}
+        {#key now}
           <div class="grid" class:busy>
             {#each now.cards as c, i (c.key)}
               <div class="card" class:pick={now.from != null && i === 0} in:scale={{ start: 0.85, duration: 380, delay: i * 35, easing: backOut }}>
@@ -82,7 +144,7 @@
                 <div class="meta">
                   <div class="txt">
                     <b>{nameOf(c.idea)}</b>
-                    <span>{fmt(c.w, '')} × {fmt(c.h)} · {c.idea.across * c.idea.down} blocks {layoutName[c.idea.layout]}{c.idea.borders.length ? ` · ${c.idea.borders.length} border${c.idea.borders.length > 1 ? 's' : ''}` : ''}</span>
+                    <span>{fmt(c.w, '')} × {fmt(c.h)} · {LAYOUT[c.idea.layout]}{pieced(c.idea) ? ` · ${pieced(c.idea)} border` : ''}</span>
                   </div>
                   <button class="use" onclick={() => use(c)} title="Open this as a new quilt"><Check size={15} /> Use</button>
                 </div>
@@ -91,7 +153,7 @@
           </div>
         {/key}
       {:else}
-        <p class="wait">Dreaming up quilts…</p>
+        <p class="wait">Piecing some ideas together…</p>
       {/if}
     </div>
   </div>
@@ -99,15 +161,26 @@
 
 <style>
   .ideas { position: fixed; inset: 0; z-index: 42; display: flex; flex-direction: column; background: var(--bg); }
-  .bar { display: flex; align-items: center; gap: 10px; height: calc(60px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
-    background: var(--panel); border-bottom: 1px solid var(--line); flex: none; }
+  .bar { display: flex; align-items: center; gap: 8px; height: calc(60px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
+    background: var(--panel); flex: none; }
   .ic { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); }
-  h1 { font-size: 19px; font-weight: 800; letter-spacing: -.02em; }
+  h1 { font-size: 19px; font-weight: 800; letter-spacing: -.02em; white-space: nowrap; }
   .tip { flex: 1; min-width: 0; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tb { display: flex; align-items: center; gap: 6px; font-weight: 700; }
+  .gen { display: flex; align-items: center; gap: 7px; padding: 8px 16px; border: 0; border-radius: 99px; background: var(--accent); color: white; font-weight: 800;
+    box-shadow: 0 4px 14px oklch(from var(--accent) l c h / 35%); }
+  .steer { display: flex; flex-wrap: wrap; gap: 10px 22px; padding: 10px max(16px, env(safe-area-inset-right)) 12px max(16px, env(safe-area-inset-left)); background: var(--panel); border-bottom: 1px solid var(--line); flex: none; }
+  .grp { display: flex; align-items: center; gap: 8px; }
+  .lbl { font-size: 11.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+  .seg { display: flex; gap: 2px; padding: 3px; border-radius: 11px; background: var(--sunk);
+    button { border: 0; background: transparent; padding: 4px 10px; border-radius: 8px; font-weight: 650; font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+    button.on { background: var(--panel); color: var(--ink); box-shadow: var(--shadow); } }
+  .fabs { display: flex; gap: 6px; }
+  .sw { width: 28px; height: 28px; padding: 0; border: 0; border-radius: 8px; display: grid; place-items: center; color: white; box-shadow: inset 0 0 0 1px oklch(0% 0 0 / 15%), 0 0 0 2px var(--panel), 0 0 0 3.5px var(--accent);
+    &.off { box-shadow: inset 0 0 0 1px oklch(0% 0 0 / 15%); opacity: .35; } }
   .body { flex: 1; min-height: 0; overflow: auto; padding: 20px max(16px, env(safe-area-inset-right)) calc(28px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
   .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; max-width: 1100px; margin: 0 auto; transition: opacity .2s;
-    &.busy { opacity: .5; pointer-events: none; } }
+    &.busy { opacity: .45; pointer-events: none; } }
   .card { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
   .art { position: relative; aspect-ratio: 1; padding: 14px; border: 0; border-radius: 16px; background: var(--panel); box-shadow: var(--shadow); display: grid; place-items: center; container-type: size;
     transition: scale .35s var(--spring), box-shadow .2s;
@@ -119,9 +192,12 @@
   .txt { flex: 1; min-width: 0; display: grid; b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } span { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } }
   .use { flex: none; display: flex; align-items: center; gap: 4px; padding: 6px 12px; border: 0; border-radius: 99px; background: var(--accent); color: white; font-weight: 700; }
   .wait { text-align: center; color: var(--muted); padding: 60px 0; }
+  @media (width < 900px) { .tip { display: none; } }
   @media (width < 760px) {
-    .tip { display: none; }
-    .tb { padding: 6px 8px; }
+    .tb span { display: none; } .tb { padding: 6px 8px; }
+    h1 { font-size: 17px; }
+    .steer { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 16px; }
+    .grp { flex: none; }
     .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
     .art { padding: 8px; }
   }
