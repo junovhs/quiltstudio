@@ -7,6 +7,7 @@
   import { thumbnail } from '../lib/render';
   import type { Doc } from '../lib/model';
   import { fmt } from '../lib/calc';
+  import { PALETTES, withPalette } from '../lib/palettes';
 
   /* ---------- steering, remembered on this device ---------- */
   const KEY = 'quiltstudio.steer';
@@ -24,14 +25,18 @@
     steer.skip = steer.skip.includes(id) ? steer.skip.filter(f => f !== id) : [...steer.skip, id];
     void fresh();
   }
-  const fabrics = $derived(app.doc.fabrics.filter(f => f.id !== app.doc.settings.binding));
+  function setPalette(id: string | null) { steer.palette = id; steer.skip = []; void fresh(); }
+  // the fabrics in play: the quilt's own, or the chosen colour preset's
+  const colours = $derived(withPalette(app.doc, steer.palette));
+  const fabrics = $derived(colours.fabrics.filter(f => f.id !== colours.settings.binding));
+  const mine = $derived(app.doc.fabrics.filter(f => f.id !== app.doc.settings.binding));
 
   /* ---------- the nine ---------- */
   interface Card { idea: Idea; doc: Doc; img: string; w: number; h: number; key: string }
   let steps = $state.raw<{ cards: Card[]; from: number | null }[]>([]);
   let busy = $state(false);
   const now = $derived(steps.at(-1));
-  const source = () => $state.snapshot(app.doc) as Doc;
+  const source = () => withPalette($state.snapshot(app.doc) as Doc, steer.palette);
   const sizeOf = (d: Doc) => { const r = d.blocks[d.root]; return { w: r.cols.reduce((a, b) => a + b, 0), h: r.rows.reduce((a, b) => a + b, 0) }; };
   async function card(idea: Idea, doc: Doc): Promise<Card> {
     return { idea, doc, ...sizeOf(doc), img: await thumbnail(doc, app.images, 420), key: Math.random().toString(36).slice(2) };
@@ -70,7 +75,8 @@
   function back() { if (steps.length > 1) steps = steps.slice(0, -1); }
 
   async function use(c: { idea: Idea; doc: Doc }) {
-    const images = { ...app.images };
+    // fabric photos only come along when the quilt uses your own fabrics
+    const images = steer.palette ? {} : { ...app.images };
     newProject(structuredClone(c.doc), nameOf(c.idea));
     for (const [id, url] of Object.entries(images)) setImage(id, await (await fetch(url)).blob());
     ui.ideas = false;
@@ -123,8 +129,21 @@
         <span class="lbl">Fabrics</span>
         <div class="fabs">
           {#each fabrics as f (f.id)}
-            <button class="sw f-{f.id}" class:off={steer.skip.includes(f.id)} title="{steer.skip.includes(f.id) ? 'Use' : 'Leave out'} {f.name}" onclick={() => toggleFabric(f.id)} disabled={busy}>
+            <button class="sw f-{f.id}" style:background-color={f.color} class:off={steer.skip.includes(f.id)} title="{steer.skip.includes(f.id) ? 'Use' : 'Leave out'} {f.name}" onclick={() => toggleFabric(f.id)} disabled={busy}>
               {#if steer.skip.includes(f.id)}<Ban size={14} />{/if}
+            </button>
+          {/each}
+        </div>
+      </div>
+      <div class="grp pals">
+        <span class="lbl">Colours</span>
+        <div class="palrow">
+          <button class="pal" class:on={!steer.palette} onclick={() => setPalette(null)} disabled={busy} title="Your quilt's fabrics">
+            <span class="strip">{#each mine as f (f.id)}<i class="f-{f.id}" style:background-color={f.color}></i>{/each}</span><span class="pn">My fabrics</span>
+          </button>
+          {#each PALETTES as p (p.id)}
+            <button class="pal" class:on={steer.palette === p.id} onclick={() => setPalette(p.id)} disabled={busy} title={p.colors.map(c => c[0]).join(', ')}>
+              <span class="strip">{#each p.colors as [, c]}<i style:background-color={c}></i>{/each}</span><span class="pn">{p.name}</span>
             </button>
           {/each}
         </div>
@@ -178,6 +197,13 @@
   .fabs { display: flex; gap: 6px; }
   .sw { width: 28px; height: 28px; padding: 0; border: 0; border-radius: 8px; display: grid; place-items: center; color: white; box-shadow: inset 0 0 0 1px oklch(0% 0 0 / 15%), 0 0 0 2px var(--panel), 0 0 0 3.5px var(--accent);
     &.off { box-shadow: inset 0 0 0 1px oklch(0% 0 0 / 15%); opacity: .35; } }
+  .pals { flex-basis: 100%; min-width: 0; }
+  .palrow { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 3px; margin: -3px; }
+  .pal { flex: none; display: flex; align-items: center; gap: 7px; padding: 4px 10px 4px 4px; border: 0; border-radius: 10px; background: var(--sunk); font-weight: 650; font-size: 12.5px; color: var(--muted);
+    &.on { background: var(--panel); color: var(--ink); box-shadow: 0 0 0 2px var(--accent), var(--shadow); } }
+  .strip { display: flex; width: 50px; height: 22px; border-radius: 6px; overflow: hidden; box-shadow: inset 0 0 0 1px oklch(0% 0 0 / 12%);
+    i { flex: 1; } }
+  .pn { white-space: nowrap; }
   .body { flex: 1; min-height: 0; overflow: auto; padding: 20px max(16px, env(safe-area-inset-right)) calc(28px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
   .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; max-width: 1100px; margin: 0 auto; transition: opacity .2s;
     &.busy { opacity: .45; pointer-events: none; } }

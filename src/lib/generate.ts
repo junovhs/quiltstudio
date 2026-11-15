@@ -28,8 +28,10 @@ export interface Steer {
   size: 'baby' | 'throw' | 'bed';
   /** fabric ids to leave out */
   skip: string[];
+  /** a colour preset (palettes.ts) instead of the quilt's own fabrics */
+  palette: string | null;
 }
-export const DEFAULT_STEER: Steer = { look: 'mixed', layout: 'any', feel: 'balanced', size: 'throw', skip: [] };
+export const DEFAULT_STEER: Steer = { look: 'mixed', layout: 'any', feel: 'balanced', size: 'throw', skip: [], palette: null };
 const TARGET = { baby: { w: 40, tall: 1.1 }, throw: { w: 56, tall: 1.12 }, bed: { w: 70, tall: 1.25 } };
 
 /* ---------- the recipe ---------- */
