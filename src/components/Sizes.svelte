@@ -3,7 +3,7 @@
   import { cubicOut } from 'svelte/easing';
   import { TriangleAlert, Ruler, Search, Plus, X } from '@lucide/svelte';
   import Tile from './Tile.svelte';
-  import { app, edit, ui } from '../lib/store.svelte';
+  import { app, edit, ui, rollback } from '../lib/store.svelte';
   import { fmt } from '../lib/calc';
   import { pieces, whereIs, resizePiece, finishedFor, templateSeam, type Piece } from '../lib/sizes';
 
@@ -24,8 +24,15 @@
   function fix(p: Piece, t: number) {
     const v = finishedFor(app.doc, t);
     if (v <= 0) return;
-    edit(() => resizePiece(app.doc, p, v));
-    ui.glow = [];
+    tryResize(p, v, v);
+  }
+  let no = $state('');
+  // locks win: if the change would move something locked, undo it and shake
+  function tryResize(p: Piece, long: number, short: number) {
+    let ok = true;
+    edit(() => { ok = resizePiece(app.doc, p, long, short); });
+    if (!ok) { rollback(); no = p.key; setTimeout(() => (no = ''), 500); }
+    else ui.glow = [];
   }
   const T = $derived([...app.doc.settings.templates].sort((a, b) => a - b));
   const maxT = $derived(Math.max(...T, 1));
@@ -37,6 +44,12 @@
     app.doc.settings.templateSeams = { ...(app.doc.settings.templateSeams ?? {}), [t]: next };
   });
   const SEAMS = [0.25, 0.375, 0.5];
+  // the finished squares your templates can make (one button per size, smallest first)
+  function sizesFor(_p: Piece) {
+    const seen = new Map<number, number>();
+    for (const t of T) { const v = finishedFor(app.doc, t); if (v > 0 && !seen.has(+v.toFixed(3))) seen.set(+v.toFixed(3), t); }
+    return [...seen].sort((a, b) => a[0] - b[0]).map(([v, t]) => ({ v, t }));
+  }
 </script>
 
 {#if ui.sizes}
@@ -53,7 +66,7 @@
 
     <div class="list">
       {#each list as p (p.key)}
-        <div class="row {p.status}" class:open={open === p.key}>
+        <div class="row {p.status}" class:open={open === p.key} class:no={no === p.key}>
           <button class="main" onclick={() => toggle(p)}>
             <span class="pic" style:aspect-ratio="{p.w} / {p.h}"><Tile c={p.c} /></span>
             <span class="count">{p.qty}</span>
@@ -68,18 +81,19 @@
           {#if open === p.key}
             <div class="more" transition:slide={{ duration: 200 }}>
               <button class="find" class:on={ui.glow.length > 0} title="Show me where" onclick={() => glow(p)}><Search size={16} /></button>
+              <!-- every button is the FINISHED size you'll get; the template is just a hint -->
               {#if p.status === 'near'}
-                <button class="chip sq" title="Square it: short side grows to {fmt(p.w)}" onclick={() => edit(() => resizePiece(app.doc, p, p.w, p.w))}><span class="box"></span>{fmt(p.w)}</button>
-                <button class="chip sq" title="Square it: long side shrinks to {fmt(p.h)}" onclick={() => edit(() => resizePiece(app.doc, p, p.h, p.h))}><span class="box sm"></span>{fmt(p.h)}</button>
-                <span class="div"></span>
+                <button class="chip big" title="Square: short side grows" onclick={() => tryResize(p, p.w, p.w)}><span class="box"></span>{fmt(p.w)}</button>
+                <button class="chip big" title="Square: long side shrinks" onclick={() => tryResize(p, p.h, p.h)}><span class="box"></span>{fmt(p.h)}</button>
               {/if}
-              {#each T as t}
-                {@const v = finishedFor(app.doc, t)}
-                <button class="chip" class:on={p.template === t} class:fin={isF(t)} disabled={v <= 0}
-                  title="Your {fmt(t)} square{isF(t) ? ' (finished size)' : ` (${fmt(sa(t))} seam)`} → {fmt(Math.max(v, 0))} finished" onclick={() => fix(p, t)}>
-                  <i style:--s={t / maxT}></i>{fmt(t)}<small>→{fmt(Math.max(v, 0), '')}</small>
+              {#each sizesFor(p) as o (o.v)}
+                <button class="chip big" class:on={Math.abs(o.v - p.w) < 1e-6 && Math.abs(o.v - p.h) < 1e-6} title="Make every copy {fmt(o.v)} × {fmt(o.v)} finished (your {fmt(o.t)} template)" onclick={() => tryResize(p, o.v, o.v)}>
+                  <span class="box"></span>{fmt(o.v)}<small>{fmt(o.t)}</small>
                 </button>
               {/each}
+              <label class="chip big any" title="Any size: type it (finished)">
+                <span class="box"></span><input type="text" inputmode="decimal" placeholder="4" onchange={e => { const v = parseFloat(e.currentTarget.value.replace(',', '.')); e.currentTarget.value = ''; if (v > 0) tryResize(p, v, v); }} />″
+              </label>
             </div>
           {/if}
         </div>
@@ -108,6 +122,8 @@
     button.on { background: var(--panel); color: var(--accent); box-shadow: var(--shadow); } }
   .sp { flex: 1; }
   .list { flex: 1; min-height: 0; overflow: auto; display: grid; gap: 4px; align-content: start; padding: 8px; scrollbar-width: thin; }
+  .row.no { animation: shake .4s var(--ease); }
+  @keyframes shake { 20%, 60% { translate: -6px; } 40%, 80% { translate: 6px; } }
   .row { border-radius: 12px; transition: background .2s;
     &.odd, &.near { background: oklch(80% 0.12 70 / 18%); } &.open { background: var(--sunk); } }
   .main { width: 100%; display: flex; align-items: center; gap: 10px; padding: 7px 10px; border: 0; background: transparent; text-align: left; }
@@ -126,6 +142,10 @@
   .chip { height: 32px; padding: 0 9px; border-radius: 9px; background: var(--panel); border: 1px solid var(--line);
     small { font-size: 10.5px; color: var(--muted); font-weight: 600; }
     &.on { border-color: oklch(55% 0.15 150); color: oklch(55% 0.15 150); } }
+  .big { height: 36px; font-size: 14px; font-weight: 800; gap: 6px;
+    .box { width: 13px; height: 13px; border: 2px solid currentColor; border-radius: 2px; }
+    small { font-size: 10px; color: var(--muted); font-weight: 600; margin-left: 2px; } }
+  .any input { width: 2.6em; field-sizing: fixed; border: 0; background: none; font: inherit; font-weight: 800; padding: 0; text-align: center; }
   .sq .box { width: 14px; height: 14px; border: 2px solid currentColor; border-radius: 2px; &.sm { width: 10px; height: 10px; } }
   .div { width: 1px; height: 22px; background: var(--line); align-self: center; }
   .nsq { display: grid; place-items: center; width: 22px; height: 22px; i { width: 16px; height: 13px; border: 2px dashed oklch(60% 0.16 55); border-radius: 2px; } }

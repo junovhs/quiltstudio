@@ -5,8 +5,13 @@ import { analyse, cellSize, scaleOf } from './calc';
 
 const EPS = 1e-6;
 
+import { frozenTracks } from './model';
 /** which tracks of `b` hold a locked block (those keep their size) */
 function lockedTracks(doc: Doc, b: Block, axis: 'col' | 'row') {
+  return frozenTracks(doc, b, axis);
+}
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function _oldLockedTracks(doc: Doc, b: Block, axis: 'col' | 'row') {
   const n = axis === 'col' ? b.cols.length : b.rows.length;
   const out = Array<boolean>(n).fill(false);
   for (const c of b.cells) {

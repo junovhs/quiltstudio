@@ -1,9 +1,9 @@
 <script lang="ts">
   import { fade } from 'svelte/transition';
-  import { Plus, X } from '@lucide/svelte';
+  import { Plus, X, Lock } from '@lucide/svelte';
   import { fmt, scaleOf } from '../lib/calc';
   import { app, begin, edit, save } from '../lib/store.svelte';
-  import { insertTrack, deleteTrack, type Block } from '../lib/model';
+  import { insertTrack, deleteTrack, frozenTracks, type Block } from '../lib/model';
 
   let { block, axis }: { block: Block; axis: 'col' | 'row' } = $props();
   const tracks = $derived(axis === 'col' ? block.cols : block.rows);
@@ -11,16 +11,19 @@
   // numbers are real quilt inches, shown only when measuring
   const k = $derived.by(() => { const s = scaleOf(app.doc, block.id); return s ? (axis === 'col' ? s.sx : s.sy) : 1; });
   const showNums = $derived(app.tool === 'measure');
+  // rows/columns holding something locked can't change
+  const frozen = $derived(frozenTracks(app.doc, block, axis));
   let el: HTMLDivElement;
 
   function setTrack(i: number, v: number) {
-    if (!(v > 0)) return;
+    if (!(v > 0) || frozen[i]) return;
     edit(() => { tracks[i] = v / k; });
   }
 
   // drag the line between two tracks: they trade size, the block keeps its size
   function drag(e: PointerEvent, i: number) {
     e.preventDefault();
+    if (frozen[i] || frozen[i + 1]) return;
     const len = axis === 'col' ? el.clientWidth : el.clientHeight;
     const perUnit = len / total, start = axis === 'col' ? e.clientX : e.clientY;
     const a0 = tracks[i], b0 = tracks[i + 1], step = 0.125 / k;
@@ -43,17 +46,18 @@
   style:grid-template-columns={axis === 'col' ? tracks.map(v => v + 'fr').join(' ') : null}
   style:grid-template-rows={axis === 'row' ? tracks.map(v => v + 'fr').join(' ') : null}>
   {#each tracks as t, i}
-    <div class="track">
+    <div class="track" class:frozen={frozen[i]}>
       <span class="tick"></span>
+      {#if frozen[i]}<span class="lk"><Lock size={10} strokeWidth={3} /></span>{/if}
       {#if showNums}
-        <input type="text" inputmode="decimal" value={fmt(t * k, '')} transition:fade={{ duration: 150 }}
+        <input type="text" inputmode="decimal" value={fmt(t * k, '')} disabled={frozen[i]} transition:fade={{ duration: 150 }}
           onchange={e => setTrack(i, parseFloat(e.currentTarget.value.replace(',', '.')))} />
       {/if}
-      <span class="tools">
+      <span class="tools" class:off={frozen[i] || block.locked}>
         <button title="Add" onclick={() => edit(() => insertTrack(block, axis, i + 1, t))}><Plus size={12} strokeWidth={2.5} /></button>
         {#if tracks.length > 1}<button title="Remove" onclick={() => edit(() => deleteTrack(block, axis, i))}><X size={12} strokeWidth={2.5} /></button>{/if}
       </span>
-      {#if i < tracks.length - 1}<span class="handle" role="separator" onpointerdown={e => drag(e, i)}></span>{/if}
+      {#if i < tracks.length - 1 && !frozen[i] && !frozen[i + 1]}<span class="handle" role="separator" onpointerdown={e => drag(e, i)}></span>{/if}
     </div>
   {/each}
 </div>
@@ -70,6 +74,10 @@
   @media (hover: none) { .track:focus-within .tools { opacity: 1; scale: 1; pointer-events: auto; } }
   .track { position: relative; display: grid; place-items: center; min-width: 0; min-height: 0; color: var(--muted); border-radius: 6px; transition: background .2s;
     &:hover { background: var(--accent-soft); color: var(--ink); } }
+  .frozen .tick { background: var(--ink); opacity: .5; }
+  .lk { position: absolute; display: grid; place-items: center; color: var(--muted);
+    .col & { top: -2px; right: 2px; } .row & { left: 2px; bottom: 2px; } }
+  .tools.off { display: none; }
   .tick { position: absolute; background: var(--line); border-radius: 2px;
     .col & { left: 3px; right: 3px; bottom: 2px; height: 3px; }
     .row & { top: 3px; bottom: 3px; right: 2px; width: 3px; }

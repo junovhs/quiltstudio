@@ -183,6 +183,8 @@ export function cellSize(doc: Doc, def: string, i: number) {
 export function fitToAnchor(doc: Doc) {
   const a = doc.settings.anchor;
   if (!a) return;
+  // a lock beats the pin: never rescale something that's locked
+  if (Object.values(doc.blocks).some(b => b.locked)) return;
   const b = doc.blocks[a.def];
   if (!b || !b.cells[a.i]) { doc.settings.anchor = null; return; }
   const cs = cellSize(doc, a.def, a.i)!;

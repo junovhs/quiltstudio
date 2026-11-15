@@ -421,3 +421,27 @@ export function collapseTracks(b: Block) {
     }
   }
 }
+
+/* ---------------- locks ---------------- */
+/** is this block locked, or does it contain a locked block anywhere inside? (then its size can't change) */
+export function holdsLock(doc: Doc, id: string, seen = new Set<string>()): boolean {
+  const b = doc.blocks[id];
+  if (!b || seen.has(id)) return false;
+  if (b.locked) return true;
+  seen.add(id);
+  return b.cells.some(c => c.c.k === 'inst' && holdsLock(doc, c.c.ref, seen));
+}
+/** rows/columns of `b` that may not change size: they hold a locked block (or b itself is locked) */
+export function frozenTracks(doc: Doc, b: Block, axis: 'col' | 'row'): boolean[] {
+  const n = axis === 'col' ? b.cols.length : b.rows.length;
+  if (b.locked) return Array(n).fill(true);
+  const out = Array<boolean>(n).fill(false);
+  for (const c of b.cells) {
+    if (c.c.k !== 'inst' || !holdsLock(doc, c.c.ref)) continue;
+    const [from, span] = axis === 'col' ? [c.x, c.cs] : [c.y, c.rs];
+    for (let i = from; i < from + span; i++) out[i] = true;
+  }
+  return out;
+}
+/** any lock anywhere in the quilt? */
+export const anyLock = (doc: Doc) => Object.values(doc.blocks).some(b => b.locked);

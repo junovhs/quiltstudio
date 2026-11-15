@@ -1,6 +1,6 @@
 /* Odd-size finder: every distinct piece in the quilt (all identical copies grouped),
  * checked against the quilter's own square templates (cut sizes, seam included). */
-import { sum, type Content, type Doc } from './model';
+import { sum, frozenTracks, uses, type Block, type Cell, type Content, type Doc } from './model';
 import { scaleOf, cellSize } from './calc';
 
 export type Status = 'template' | 'ruler' | 'odd' | 'near';
@@ -97,56 +97,80 @@ function keyOf(c: Content, w: number, h: number) {
 }
 
 /**
- * Make every copy of a piece `size` × `size` (finished). The rows/columns it sits in
- * change; each block that grows passes the change up to whatever holds it, so
- * everything stays lined up (the quilt may grow or shrink a little).
+ * Make every copy of a piece `size` (long side) × `shortTo` (short side), finished.
+ * Locks always win: nothing locked changes size. If a block can't grow because the
+ * row/column it sits in holds a locked block, the change is soaked up by the block's
+ * other (unlocked) rows/columns instead. If there's no room, nothing changes (returns false).
  */
-export function resizePiece(doc: Doc, p: Piece, size: number, shortTo = size) {
-  // `size` is for the piece's long side, `shortTo` for its short side (equal = square it)
+export function resizePiece(doc: Doc, p: Piece, size: number, shortTo = size): boolean {
   const where = whereIs(doc, p);
-  // every block keeps its current inches-per-unit while we resize (so sizes add up as real inches)
-  const scales = new Map(Object.keys(doc.blocks).map(id => [id, id === doc.root ? { sx: 1, sy: 1 } : scaleOf(doc, id)]));
-  const changed = new Set<string>();
+  const scales = new Map(Object.keys(doc.blocks).map(id => [id, id === doc.root ? { sx: 1, sy: 1 } : (scaleOf(doc, id) ?? { sx: 1, sy: 1 })]));
+  const lockedIds = Object.values(doc.blocks).filter(b => b.locked).map(b => b.id);
+  const k = (id: string, axis: 'col' | 'row') => (axis === 'col' ? scales.get(id)!.sx : scales.get(id)!.sy);
+  const tr = (id: string, axis: 'col' | 'row') => (axis === 'col' ? doc.blocks[id].cols : doc.blocks[id].rows);
+
+  // soak a change up inside block `id` using its free tracks (not `keep`, not frozen)
+  function absorb(id: string, axis: 'col' | 'row', delta: number, keep: Set<number>): boolean {
+    const t = tr(id, axis), f = frozenTracks(doc, doc.blocks[id], axis), kk = k(id, axis);
+    const free = t.map((_, i) => i).filter(i => !keep.has(i) && !f[i]);
+    const room = free.reduce((s, i) => s + t[i] * kk, 0);
+    // the other tracks give back what the resized ones took (block keeps its size)
+    if (!free.length || room - delta < free.length * 0.25 - 1e-9) return false;
+    for (const i of free) t[i] = (t[i] * kk - delta * (t[i] * kk) / room) / kk;
+    return true;
+  }
+
+  // block `id` changed by `delta` real inches along `axis`: make its slots follow, or soak it up
+  function settle(id: string, axis: 'col' | 'row', delta: number, keep: Set<number>, depth = 0): boolean {
+    if (Math.abs(delta) < 1e-9 || id === doc.root) return true;
+    if (depth > 12) return false;
+    const holders: { pb: Block; cell: Cell; paxis: 'col' | 'row' }[] = [];
+    for (const pb of Object.values(doc.blocks))
+      for (const cell of pb.cells)
+        if (cell.c.k === 'inst' && cell.c.ref === id) holders.push({ pb, cell, paxis: (cell.c.rot % 2 ? (axis === 'col' ? 'row' : 'col') : axis) as 'col' | 'row' });
+    // can every slot grow/shrink? (not locked, and some spanned track isn't frozen)
+    const pick = holders.map(({ pb, cell, paxis }) => {
+      if (pb.locked) return -1;
+      const f = frozenTracks(doc, pb, paxis);
+      const [from, span] = paxis === 'col' ? [cell.x, cell.cs] : [cell.y, cell.rs];
+      for (let i = from + span - 1; i >= from; i--) if (!f[i]) return i;
+      return -1;
+    });
+    if (!holders.length || pick.some(i => i < 0)) return absorb(id, axis, delta, keep);
+    // grow the slots (each parent track once), then let each parent settle in turn
+    const byParent = new Map<string, { axis: 'col' | 'row'; tracks: Set<number> }>();
+    holders.forEach(({ pb, paxis }, n) => {
+      const e = byParent.get(pb.id + paxis) ?? { axis: paxis, tracks: new Set<number>() };
+      e.tracks.add(pick[n]); byParent.set(pb.id + paxis, e);
+    });
+    for (const [key, e] of byParent) {
+      const pid = key.slice(0, -e.axis.length), t = tr(pid, e.axis), kk = k(pid, e.axis);
+      for (const i of e.tracks) t[i] += delta / kk;
+      if (!settle(pid, e.axis, delta * e.tracks.size, new Set(e.tracks), depth + 1)) return false;
+    }
+    return true;
+  }
+
   for (const [id, idxs] of where) {
-    const b = doc.blocks[id], sc = scales.get(id) ?? { sx: 1, sy: 1 };
-    const cols = new Set<number>(), rows = new Set<number>();
+    // pieces inside a locked block can't change
+    if (lockedIds.some(l => l === id || uses(doc, l, id))) return false;
+    const b = doc.blocks[id], sc = scales.get(id)!;
     const setC = new Map<number, number>(), setR = new Map<number, number>();
     for (const i of idxs) {
       const c = b.cells[i];
       const cw = sum(b.cols, c.x, c.cs) * sc.sx, ch = sum(b.rows, c.y, c.rs) * sc.sy;
       const wIsLong = cw >= ch - 1e-6;
       const tw = wIsLong ? size : shortTo, th = wIsLong ? shortTo : size;
-      // only touch the directions that actually change, so neighbours stay put
       if (c.cs === 1 && Math.abs(cw - tw) > 1e-6) setC.set(c.x, tw);
       if (c.rs === 1 && Math.abs(ch - th) > 1e-6) setR.set(c.y, th);
     }
-    void cols; void rows;
-    for (const [x, v] of setC) b.cols[x] = v / sc.sx;
-    for (const [y, v] of setR) b.rows[y] = v / sc.sy;
-    changed.add(id);
-  }
-  // pass size changes up: a block's slot in its parent becomes the block's new size
-  let guard = 0;
-  while (changed.size && guard++ < 20) {
-    const next = new Set<string>();
-    for (const id of changed) {
-      const child = doc.blocks[id], cs = scales.get(id);
-      if (!cs || id === doc.root) continue;
-      const realW = sum(child.cols) * cs.sx, realH = sum(child.rows) * cs.sy;
-      for (const pb of Object.values(doc.blocks)) {
-        const ps = scales.get(pb.id);
-        if (!ps) continue;
-        for (const cell of pb.cells) {
-          if (cell.c.k !== 'inst' || cell.c.ref !== id) continue;
-          const [needW, needH] = cell.c.rot % 2 ? [realH, realW] : [realW, realH];
-          const haveW = sum(pb.cols, cell.x, cell.cs) * ps.sx, haveH = sum(pb.rows, cell.y, cell.rs) * ps.sy;
-          if (Math.abs(needW - haveW) > 1e-6) { pb.cols[cell.x + cell.cs - 1] += (needW - haveW) / ps.sx; next.add(pb.id); }
-          if (Math.abs(needH - haveH) > 1e-6) { pb.rows[cell.y + cell.rs - 1] += (needH - haveH) / ps.sy; next.add(pb.id); }
-        }
-      }
-    }
-    changed.clear();
-    for (const n of next) changed.add(n);
+    const fc = frozenTracks(doc, b, 'col'), fr = frozenTracks(doc, b, 'row');
+    if ([...setC.keys()].some(x => fc[x]) || [...setR.keys()].some(y => fr[y])) return false;
+    let dW = 0, dH = 0;
+    for (const [x, v] of setC) { dW += v - b.cols[x] * sc.sx; b.cols[x] = v / sc.sx; }
+    for (const [y, v] of setR) { dH += v - b.rows[y] * sc.sy; b.rows[y] = v / sc.sy; }
+    if (!settle(id, 'col', dW, new Set(setC.keys()))) return false;
+    if (!settle(id, 'row', dH, new Set(setR.keys()))) return false;
   }
   // a pinned piece keeps whatever size it has now (so the pin doesn't rescale it all back)
   const a = doc.settings.anchor;
@@ -154,4 +178,5 @@ export function resizePiece(doc: Doc, p: Piece, size: number, shortTo = size) {
     const cs = cellSize(doc, a.def, a.i);
     if (cs) a.size = Math.min(cs.w, cs.h);
   }
+  return true;
 }
