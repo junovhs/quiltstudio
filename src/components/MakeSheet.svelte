@@ -1,10 +1,10 @@
 <script lang="ts">
   import { fly, fade, scale } from 'svelte/transition';
   import { backOut, cubicOut } from 'svelte/easing';
-  import { Scissors, X, ChevronRight, TriangleAlert, Layers } from '@lucide/svelte';
+  import { Scissors, X, ChevronRight, TriangleAlert, Layers, Check } from '@lucide/svelte';
   import Tile from './Tile.svelte';
   import Thumb from './Thumb.svelte';
-  import { app, stats, ui } from '../lib/store.svelte';
+  import { app, stats, ui, toggleDone } from '../lib/store.svelte';
   import { dim, fmt, yd } from '../lib/calc';
 
   const a = $derived(stats());
@@ -12,6 +12,10 @@
   const px = (inches: number, max = 130) => Math.max(14, Math.min(max, inches * PX));
   const fname = (id: string) => app.doc.fabrics.find(f => f.id === id)?.name ?? '';
   const close = () => (ui.make = false);
+  const done = (key: string) => !!app.doc.progress?.[key];
+  // everything you can tick off, and how many are ticked
+  const keys = $derived([...a.yardage.flatMap(y => y.cuts.map(c => c.key)), ...a.units.map(u => u.key), ...a.order.map(id => 'blk|' + id)]);
+  const doneCount = $derived(keys.filter(done).length);
   // blocks in the order you'd make them, each with its copies
   const blocks = $derived(a.order.map(id => {
     const us = a.uses.filter(u => u.id === id);
@@ -27,6 +31,10 @@
     <header>
       <span class="title"><Scissors size={18} /></span>
       <span class="size">{dim(a.size.w, a.size.h)}</span>
+      <span class="prog" title="{doneCount} / {keys.length}">
+        <span class="bar"><i style:width="{keys.length ? (doneCount / keys.length) * 100 : 0}%"></i></span>
+        {#if doneCount === keys.length && keys.length}<span class="all" in:scale={{ start: 0, duration: 600, easing: backOut }}><Check size={14} strokeWidth={3.5} /></span>{/if}
+      </span>
       {#if a.warnings.length}<span class="warn" title={a.warnings.join('\n\n')}><TriangleAlert size={17} /></span>{/if}
       <button class="icon" onclick={close}><X size={18} /></button>
     </header>
@@ -49,8 +57,8 @@
       {#each a.yardage as y}
         <section class="cuts">
           {#each y.cuts as c, i}
-            <div class="piece" in:scale={{ start: 0.7, delay: 80 + i * 30, duration: 450, easing: backOut }}
-              title="{dim(c.w, c.h)}{c.trimTo ? ` → ${fmt(c.trimTo)}` : ''}">
+            <div class="piece" class:done={done(c.key)} in:scale={{ start: 0.7, delay: 80 + i * 30, duration: 450, easing: backOut }}
+              title="{dim(c.w, c.h)}{c.trimTo ? ` → ${fmt(c.trimTo)}` : ''}" ondblclick={() => toggleDone(c.key)} role="button" tabindex="-1">
               <div class="cut f-{c.f}" style:width="{px(c.w)}px" style:height="{px(c.h)}px">
                 {#if c.shape !== 'rect'}
                   <svg viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -61,6 +69,7 @@
               </div>
               <span class="n count">{c.qty}</span>
               <span class="reveal">{dim(c.w, c.h)}{#if c.trimTo}<em> → {fmt(c.trimTo)}</em>{/if}</span>
+              {#if done(c.key)}<span class="tick" in:scale={{ start: 0, duration: 500, easing: backOut }}><Check size={14} strokeWidth={3.5} /></span>{/if}
             </div>
           {/each}
         </section>
@@ -70,18 +79,20 @@
       <h3><Layers size={15} /></h3>
       <section class="flow">
         {#each a.units as u, i}
-          <div class="piece" title="{dim(u.w, u.h)}" in:scale={{ start: 0.7, delay: 80 + i * 40, duration: 450, easing: backOut }}>
+          <div class="piece" class:done={done(u.key)} title="{dim(u.w, u.h)}" ondblclick={() => toggleDone(u.key)} role="button" tabindex="-1" in:scale={{ start: 0.7, delay: 80 + i * 40, duration: 450, easing: backOut }}>
             <div class="unit" style:width="{px(u.w)}px" style:height="{px(u.h)}px"><Tile c={u.c} /></div>
             <span class="n count">{u.qty}</span>
             <span class="reveal">{dim(u.w, u.h)}</span>
+            {#if done(u.key)}<span class="tick" in:scale={{ start: 0, duration: 500, easing: backOut }}><Check size={14} strokeWidth={3.5} /></span>{/if}
           </div>
         {/each}
         {#each blocks as blk, i}
           <ChevronRight size={18} class="arrow" />
-          <div class="piece" title="{dim(blk.w, blk.h)}" in:scale={{ start: 0.7, delay: 120 + i * 50, duration: 450, easing: backOut }}>
+          <div class="piece" class:done={done('blk|' + blk.id)} title="{dim(blk.w, blk.h)}" ondblclick={() => toggleDone('blk|' + blk.id)} role="button" tabindex="-1" in:scale={{ start: 0.7, delay: 120 + i * 50, duration: 450, easing: backOut }}>
             <div class="unit" style:width="{px(blk.w, 110)}px" style:height="{px(blk.h, 110)}px"><Thumb id={blk.id} /></div>
             <span class="n count">{blk.n}</span>
             <span class="reveal">{dim(blk.w, blk.h)}</span>
+            {#if done('blk|' + blk.id)}<span class="tick" in:scale={{ start: 0, duration: 500, easing: backOut }}><Check size={14} strokeWidth={3.5} /></span>{/if}
           </div>
         {/each}
         <ChevronRight size={18} class="arrow" />
@@ -119,4 +130,14 @@
     background: var(--ink); color: var(--panel); font-size: 12px; font-weight: 600; opacity: 0; pointer-events: none; transition: opacity .2s, translate .3s var(--spring);
     em { font-style: normal; opacity: .7; } }
   .piece:hover .reveal { opacity: 1; translate: -50% 0; }
+  .piece { cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+  .piece .cut, .piece .unit, .piece .n { transition: opacity .3s, filter .3s, scale .35s var(--spring); }
+  .piece.done .cut, .piece.done .unit { opacity: .45; filter: saturate(.5); }
+  .piece.done .n { opacity: .4; text-decoration: line-through; }
+  .tick, .all { display: grid; place-items: center; border-radius: 50%; background: oklch(62% 0.16 150); color: white; box-shadow: 0 2px 8px oklch(62% 0.16 150 / 45%); }
+  .tick { position: absolute; top: -9px; right: -9px; width: 24px; height: 24px; z-index: 1; }
+  .prog { display: flex; align-items: center; gap: 8px; }
+  .bar { width: 90px; height: 8px; border-radius: 99px; background: var(--sunk); overflow: hidden;
+    i { display: block; height: 100%; background: oklch(62% 0.16 150); border-radius: inherit; transition: width .6s var(--spring); } }
+  .all { width: 22px; height: 22px; }
 </style>

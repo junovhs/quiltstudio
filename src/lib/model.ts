@@ -41,7 +41,12 @@ export const DEFAULT_SETTINGS: Settings = {
   seam: 0.25, wof: 42, binding: 'binding', bindingWidth: 0.375, seams: true,
   anchor: null, hst: 'trim', templates: [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 6],
 };
-export interface Doc { v: 3; root: string; fabrics: Fabric[]; blocks: Record<string, Block>; settings: Settings }
+export interface Doc {
+  v: 3; root: string; fabrics: Fabric[]; blocks: Record<string, Block>; settings: Settings;
+  name?: string;
+  /** Make-sheet check marks: cut/unit/block key -> done */
+  progress?: Record<string, boolean>;
+}
 
 export const uid = (p = 'b') => p + Math.random().toString(36).slice(2, 8);
 export const sum = (a: number[], from = 0, n = a.length) => a.slice(from, from + n).reduce((s, v) => s + v, 0);
@@ -332,4 +337,13 @@ export function defaultDoc(): Doc {
     blocks: Object.fromEntries(blocks.map(b => [b.id, b])),
     settings: { ...DEFAULT_SETTINGS, templates: [...DEFAULT_SETTINGS.templates], anchor: { def: 'nine', i: 0, size: 1.5 } },
   };
+}
+
+/** a fresh, empty quilt: same starter fabrics, a 3 × 3 grid of empty 12″ squares */
+export function blankDoc(): Doc {
+  const d = defaultDoc();
+  const cells: Cell[] = Array.from({ length: 9 }, (_, i) => ({ x: i % 3, y: Math.floor(i / 3), cs: 1, rs: 1, c: { k: 'empty' } }));
+  d.blocks = { quilt: { id: 'quilt', name: 'Quilt', cols: [12, 12, 12], rows: [12, 12, 12], cells } };
+  d.settings.anchor = null;
+  return d;
 }

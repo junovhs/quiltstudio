@@ -2,18 +2,19 @@
   import { onMount } from 'svelte';
   import { scale } from 'svelte/transition';
   import { backOut } from 'svelte/easing';
-  import { Undo2, Redo2, Scissors, Settings, House, ChevronRight, Download, Upload, RotateCcw, Grid3x3, Ban } from '@lucide/svelte';
+  import { Undo2, Redo2, Scissors, Settings, House, ChevronRight, Grid3x3, Ban, FolderOpen } from '@lucide/svelte';
   import Canvas from './components/Canvas.svelte';
   import Palette from './components/Palette.svelte';
   import Swatches from './components/Swatches.svelte';
   import ContextBar from './components/ContextBar.svelte';
   import MeasurePop from './components/MeasurePop.svelte';
   import MakeSheet from './components/MakeSheet.svelte';
+  import Projects from './components/Projects.svelte';
   import Picker from './components/Picker.svelte';
   import Thumb from './components/Thumb.svelte';
-  import { app, edit, undo, redo, goTo, scope, enter, loadImages, replaceDoc, getImageBlob, setImage, ui, stats } from './lib/store.svelte';
+  import { app, edit, undo, redo, goTo, scope, enter, loadImages, ui, stats } from './lib/store.svelte';
   import { fmt } from './lib/calc';
-  import { defaultDoc, groupToBlock, merge, snap, xform, type Doc, type Xf } from './lib/model';
+  import { groupToBlock, merge, snap, xform, type Xf } from './lib/model';
 
   /* fabric fills: flat colour, or the user's photo tiled at real scale */
   const fabricCss = $derived(app.doc.fabrics.map(f => {
@@ -34,7 +35,7 @@
     const mod = e.metaKey || e.ctrlKey, k = e.key.toLowerCase();
     if (mod && k === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
     if (mod && k === 'y') { e.preventDefault(); redo(); return; }
-    if (mod || ui.make) return;
+    if (mod || ui.make || ui.projects) return;
     const b = scope();
     switch (k) {
       case 'v': app.tool = 'select'; break;
@@ -52,25 +53,6 @@
     }
   }
 
-  /* export / import (photos embedded) */
-  async function exportJson() {
-    const images: Record<string, string> = {};
-    for (const f of app.doc.fabrics) {
-      const blob = f.image && await getImageBlob(f.id);
-      if (blob) images[f.id] = await new Promise<string>(r => { const fr = new FileReader(); fr.onload = () => r(fr.result as string); fr.readAsDataURL(blob); });
-    }
-    const url = URL.createObjectURL(new Blob([JSON.stringify({ doc: $state.snapshot(app.doc), images })], { type: 'application/json' }));
-    Object.assign(document.createElement('a'), { href: url, download: 'quilt.quiltstudio.json' }).click();
-    URL.revokeObjectURL(url);
-  }
-  async function importJson(e: Event) {
-    const file = (e.currentTarget as HTMLInputElement).files?.[0];
-    if (!file) return;
-    const data = JSON.parse(await file.text()) as { doc: Doc; images?: Record<string, string> };
-    if (data.doc?.v !== 3) return;
-    for (const [id, url] of Object.entries(data.images ?? {})) await setImage(id, await (await fetch(url)).blob());
-    replaceDoc(data.doc);
-  }
 </script>
 
 <svelte:window onkeydown={key} />
@@ -78,7 +60,9 @@
 
 <div class="app">
   <header class="top">
-    <img class="logo" src="/favicon.svg" alt="" />
+    <button class="proj" title="My quilts" onclick={() => (ui.projects = true)}>
+      <img class="logo" src="/favicon.svg" alt="" /><FolderOpen size={17} />
+    </button>
     <nav class="crumbs">
       <button class="crumb" class:here={!app.path.length} title="Quilt" onclick={() => goTo(0)}><House size={18} /></button>
       {#each app.path as id, i (id + i)}
@@ -107,6 +91,7 @@
 <ContextBar />
 <MeasurePop />
 <MakeSheet />
+<Projects />
 <Picker />
 
 <div popover id="settings">
@@ -124,13 +109,6 @@
       <button class:on={app.doc.settings.hst === 'trim'} title="Cut big, trim down" onclick={() => edit(() => (app.doc.settings.hst = 'trim'))}><Scissors size={14} /> +1″</button>
       <button class:on={app.doc.settings.hst === 'exact'} title="Cut exact" onclick={() => edit(() => (app.doc.settings.hst = 'exact'))}>+⅞″</button>
     </div>
-    <hr />
-    <div class="row">
-      <button class="icon" title="Save to a file" onclick={exportJson}><Download size={18} /></button>
-      <label class="icon btnlike" title="Open a file"><Upload size={18} /><input class="hidden" type="file" accept=".json,application/json" onchange={importJson} /></label>
-      <span class="sp"></span>
-      <button class="icon" title="Start over (undo-able)" onclick={() => replaceDoc(defaultDoc())}><RotateCcw size={18} /></button>
-    </div>
   </div>
 </div>
 
@@ -140,7 +118,9 @@
     grid-template: "top top top top" 56px "dock palette stage swatches" 1fr / 56px 232px 1fr 72px;
   }
   .top { grid-area: top; display: flex; align-items: center; gap: 4px; padding: 0 12px 0 14px; border-bottom: 1px solid var(--line); background: var(--panel); min-width: 0; }
-  .logo { width: 28px; height: 28px; margin-right: 18px; }
+  .proj { display: flex; align-items: center; gap: 8px; padding: 5px 10px 5px 5px; margin-right: 14px; border: 0; border-radius: 12px; background: transparent; color: var(--muted);
+    &:hover { background: var(--sunk); color: var(--ink); } }
+  .logo { width: 28px; height: 28px; }
   .crumbs { display: flex; align-items: center; gap: 4px; min-width: 0; :global(.chev) { color: var(--muted); flex: none; } }
   .crumb { width: 38px; height: 38px; padding: 5px; border: 0; background: transparent; border-radius: 10px; display: grid; place-items: center; color: var(--muted);
     &:hover { background: var(--sunk); } &.here { background: var(--accent-soft); color: var(--accent); } }
@@ -152,7 +132,6 @@
   .settings { display: grid; gap: 12px;
     label { display: flex; align-items: center; gap: 10px; font-weight: 600; }
     input[type=text] { width: 5ch; field-sizing: fixed; text-align: center; font-weight: 600; }
-    hr { border: 0; border-top: 1px solid var(--line); }
   }
   .glyph { width: 30px; height: 30px; border-radius: 7px; flex: none; position: relative; background: var(--sunk);
     &.seam::after { content: ''; position: absolute; inset: 6px; border: 2px dashed var(--muted); border-radius: 2px; }

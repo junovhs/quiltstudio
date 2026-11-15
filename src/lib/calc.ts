@@ -15,7 +15,7 @@ const k = (x: number) => x.toFixed(3);
 /* ---------- walk the design ---------- */
 export interface Unit { key: string; label: string; w: number; h: number; fabrics: string[]; qty: number; c: Content }
 export type CutShape = 'rect' | 'hst' | 'qst';
-export interface Cut { f: string; w: number; h: number; qty: number; how: string; shape: CutShape; trimTo?: number }
+export interface Cut { key: string; f: string; w: number; h: number; qty: number; how: string; shape: CutShape; trimTo?: number }
 export interface Use { id: string; w: number; h: number; qty: number }
 
 export function analyse(doc: Doc) {
@@ -28,14 +28,14 @@ export function analyse(doc: Doc) {
 
   const addUnit = (label: string, w: number, h: number, fabrics: string[], c: Content) => {
     const [L, S] = w >= h ? [w, h] : [h, w];
-    const key = `${label}|${fabrics.join(',')}|${k(L)}|${k(S)}`;
+    const key = `unit|${label}|${fabrics.join(',')}|${k(L)}|${k(S)}`;
     const u = units.get(key) ?? { key, label, w: L, h: S, fabrics, qty: 0, c };
     u.qty++; units.set(key, u);
   };
   const addCut = (f: string, w: number, h: number, qty: number, how: string, shape: CutShape = 'rect', trimTo?: number) => {
     const [L, S] = w >= h ? [w, h] : [h, w];
     const key = `${f}|${k(L)}|${k(S)}|${how}`;
-    const c = cuts.get(key) ?? { f, w: L, h: S, qty: 0, how, shape, trimTo };
+    const c = cuts.get(key) ?? { key: 'cut|' + key, f, w: L, h: S, qty: 0, how, shape, trimTo };
     c.qty += qty; cuts.set(key, c);
   };
   // triangles are pooled, then turned into squares at the end (2 per square for HST, 4 per square for QST)
