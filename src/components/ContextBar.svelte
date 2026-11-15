@@ -1,9 +1,10 @@
 <script lang="ts">
   import { scale, fly } from 'svelte/transition';
   import { backOut } from 'svelte/easing';
-  import { RotateCw, FlipHorizontal2, FlipVertical2, Combine, Group, Grid2x2, Trash2, Maximize2, X } from '@lucide/svelte';
+  import { RotateCw, FlipHorizontal2, FlipVertical2, Combine, Group, Grid2x2, Trash2, Maximize2, X, Printer, Scissors } from '@lucide/svelte';
   import Tile from './Tile.svelte';
-  import { app, edit, enter, scope } from '../lib/store.svelte';
+  import { app, edit, enter, scope, scopeId, ui } from '../lib/store.svelte';
+  import { cellSize, fmt } from '../lib/calc';
   import { fabricsOf, groupToBlock, makeKind, merge, snap, splitCell, xform, type Kind, type Xf } from '../lib/model';
 
   const b = $derived(scope());
@@ -24,6 +25,8 @@
 </script>
 
 {#if first}
+  {@const sz = cellSize(app.doc, scopeId(), sel[0])}
+  {@const seam = app.doc.settings.seam}
   <div class="bar" in:scale={{ start: 0.85, duration: 380, easing: backOut }} out:scale={{ start: 0.9, duration: 140 }}>
     {#if splitting}
       <div class="grp" in:fly={{ x: 12, duration: 250 }}>
@@ -37,8 +40,17 @@
         <button class="icon" title="Back" onclick={() => (splitting = false)}><X size={16} /></button>
       </div>
     {:else}
+      {#if sz}
+        <!-- finished size in inches, cut size underneath -->
+        <span class="size" title="Finished size · cut size">
+          <b>{fmt(sz.w, '')} × {fmt(sz.h)}</b>
+          {#if first.c.k === 'solid'}<small><Scissors size={11} /> {fmt(sz.w + 2 * seam, '')} × {fmt(sz.h + 2 * seam)}</small>{/if}
+        </span>
+        <span class="sep"></span>
+      {/if}
       {#if first.c.k === 'inst' && sel.length === 1}
         <button class="icon" title="Open this block  ↵" onclick={() => first.c.k === 'inst' && enter(first.c.ref)}><Maximize2 size={17} /></button>
+        <button class="icon" title="Print this block" onclick={() => first.c.k === 'inst' && (ui.print = [first.c.ref])}><Printer size={17} /></button>
         <span class="sep"></span>
       {/if}
       <button class="icon" title="Rotate  R" onclick={() => xf('r')}><RotateCw size={17} /></button>
@@ -74,6 +86,9 @@
     }
   }
   .grp { display: flex; gap: 2px; }
+  .size { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 8px; line-height: 1.15; white-space: nowrap; flex: none;
+    b { font-size: 15px; font-weight: 800; letter-spacing: -.01em; }
+    small { display: flex; align-items: center; gap: 3px; font-size: 11px; color: var(--muted); font-weight: 600; } }
   .sep { width: 1px; height: 22px; background: var(--line); margin: 0 4px; }
   .kind { position: relative; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 7px; overflow: hidden; margin: 0 2px;
     box-shadow: 0 0 0 0 var(--accent); transition: box-shadow .25s, scale .35s var(--spring);

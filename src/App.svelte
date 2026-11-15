@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { scale } from 'svelte/transition';
   import { backOut } from 'svelte/easing';
-  import { Undo2, Redo2, Scissors, Settings, House, ChevronRight, Grid3x3, Ban, FolderOpen } from '@lucide/svelte';
+  import { Undo2, Redo2, Scissors, Settings, House, ChevronRight, Grid3x3, Ban, FolderOpen, Printer } from '@lucide/svelte';
   import Canvas from './components/Canvas.svelte';
   import Palette from './components/Palette.svelte';
   import Swatches from './components/Swatches.svelte';
@@ -10,6 +10,7 @@
   import MeasurePop from './components/MeasurePop.svelte';
   import MakeSheet from './components/MakeSheet.svelte';
   import Projects from './components/Projects.svelte';
+  import Print from './components/Print.svelte';
   import Picker from './components/Picker.svelte';
   import Thumb from './components/Thumb.svelte';
   import { app, edit, undo, redo, goTo, scope, enter, loadImages, ui, stats } from './lib/store.svelte';
@@ -23,6 +24,13 @@
   }).join('\n'));
 
   onMount(() => { loadImages(); });
+  // finished size of whatever we're looking at: the quilt, or the block we've opened
+  const here = $derived.by(() => {
+    const a = stats(), id = app.path.at(-1);
+    if (!id) return a.size;
+    const u = a.uses.find(u => u.id === id), b = app.doc.blocks[id];
+    return u ? { w: u.w, h: u.h } : { w: b.cols.reduce((s, v) => s + v, 0), h: b.rows.reduce((s, v) => s + v, 0) };
+  });
 
   function xfSel(t: Xf) {
     const b = scope();
@@ -35,7 +43,7 @@
     const mod = e.metaKey || e.ctrlKey, k = e.key.toLowerCase();
     if (mod && k === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
     if (mod && k === 'y') { e.preventDefault(); redo(); return; }
-    if (mod || ui.make || ui.projects) return;
+    if (mod || ui.make || ui.projects || ui.print) return;
     const b = scope();
     switch (k) {
       case 'v': app.tool = 'select'; break;
@@ -72,10 +80,12 @@
         </button>
       {/each}
     </nav>
+    <span class="where" title="Finished size">{fmt(here.w, '')} × {fmt(here.h)}</span>
     <div class="spacer"></div>
     <button class="icon" disabled={!app.canUndo} onclick={undo} title="Undo"><Undo2 size={19} /></button>
     <button class="icon" disabled={!app.canRedo} onclick={redo} title="Redo"><Redo2 size={19} /></button>
     <button class="icon seamsbtn" class:on={app.doc.settings.seams} title="Seams" onclick={() => edit(() => (app.doc.settings.seams = !app.doc.settings.seams))}><Grid3x3 size={19} /></button>
+    <button class="icon" title="Print blocks" onclick={() => (ui.print = app.path.length ? [app.path.at(-1)!] : [app.doc.root, ...stats().order])}><Printer size={19} /></button>
     <button class="icon" popovertarget="settings" title="Settings"><Settings size={19} /></button>
     <button class="make" onclick={() => (ui.make = true)} title="What to cut and sew">
       <Scissors size={18} />
@@ -92,6 +102,7 @@
 <MeasurePop />
 <MakeSheet />
 <Projects />
+<Print />
 <Picker />
 
 <div popover id="settings">
@@ -146,6 +157,7 @@
   .crumb { width: 38px; height: 38px; padding: 5px; border: 0; background: transparent; border-radius: 10px; display: grid; place-items: center; color: var(--muted);
     &:hover { background: var(--sunk); } &.here { background: var(--accent-soft); color: var(--accent); } }
   .spacer { flex: 1; }
+  .where { margin-left: 12px; padding: 4px 10px; border-radius: 99px; background: var(--sunk); font-weight: 800; font-size: 14px; white-space: nowrap; letter-spacing: -.01em; }
   .make { display: flex; align-items: center; gap: 10px; margin-left: 10px; padding: 7px 12px 7px 14px; border: 0; border-radius: 99px; background: var(--accent); color: white; font-weight: 600;
     box-shadow: 0 4px 14px oklch(from var(--accent) l c h / 35%); &:hover { scale: 1.04; } }
   .dots { display: flex; i { width: 16px; height: 16px; border-radius: 50%; margin-left: -5px; box-shadow: 0 0 0 2px var(--accent); } }
