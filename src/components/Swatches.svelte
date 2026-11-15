@@ -7,6 +7,7 @@
   import { uid } from '../lib/model';
   import { yd } from '../lib/calc';
   import { supportsAnchor } from '../lib/picker.svelte';
+  import { taps } from '../lib/gestures';
 
   let editing = $state<string | null>(null);
   const ef = $derived(app.doc.fabrics.find(f => f.id === editing));
@@ -14,10 +15,10 @@
   let pop: HTMLElement;
   let colorInput = $state<HTMLInputElement>();
 
-  function openEditor(e: MouseEvent, id: string) {
-    e.preventDefault();
+  function openEditor(e: Event, id: string) {
+    e.preventDefault?.();
     document.querySelectorAll<HTMLElement>('[data-fab-anchor]').forEach(x => { x.style.removeProperty('anchor-name'); delete x.dataset.fabAnchor; });
-    const el = e.currentTarget as HTMLElement;
+    const el = ((e.currentTarget ?? e.target) as HTMLElement).closest('button') as HTMLElement;
     el.style.setProperty('anchor-name', '--fab'); el.dataset.fabAnchor = '';
     if (!supportsAnchor) { const r = el.getBoundingClientRect(); pop.style.left = r.left - 230 + 'px'; pop.style.top = r.top + 'px'; }
     editing = id; app.fabric = id; pop.showPopover();
@@ -54,7 +55,8 @@
     <div class="slot" animate:flip={{ duration: 350, easing: backOut }} in:scale={{ start: 0.4, duration: 450, easing: backOut }}>
       <button class="sw f-{f.id}" class:on={app.fabric === f.id}
         title={f.name + (yards(f.id) ? ` · ${yd(yards(f.id)!)}` : '')}
-        onclick={() => (app.fabric = f.id)} oncontextmenu={e => openEditor(e, f.id)} ondblclick={e => openEditor(e, f.id)}></button>
+        onclick={() => (app.fabric = f.id)}
+        use:taps={{ long: e => openEditor(Object.assign(e, { currentTarget: e.target }) as unknown as Event, f.id), double: e => openEditor(Object.assign(e, { currentTarget: e.target }) as unknown as Event, f.id) }}></button>
     </div>
   {/each}
   <button class="sw add" title="Add fabric" onclick={addFabric}><Plus size={20} /></button>
@@ -95,6 +97,11 @@
   }
   .add { display: grid; place-items: center; background: transparent; color: var(--muted); box-shadow: inset 0 0 0 2px var(--line);
     &:hover { color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); } }
+  @media (width < 760px) {
+    .swatches { flex-direction: row; padding: 8px 12px; gap: 10px; border: 0; border-top: 1px solid var(--line); overflow: auto hidden; }
+    .sw { width: 38px; height: 38px; }
+    #fabedit { position-area: top span-right; margin: 10px 0; }
+  }
   #fabedit { inset: auto; position-anchor: --fab; position-area: left center; position-try-fallbacks: flip-inline; margin: 0 14px; width: 220px; }
   .editor { display: grid; gap: 10px; }
   .big { height: 90px; border-radius: 10px; box-shadow: inset 0 0 0 1px oklch(0% 0 0 / 12%); transition: background-color .3s; }

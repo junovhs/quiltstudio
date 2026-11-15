@@ -65,6 +65,13 @@
     box-shadow: 0 2px 6px oklch(30% 0.04 50 / 12%), 0 14px 40px oklch(30% 0.04 50 / 20%);
     transform-origin: bottom center;
     @supports not (anchor-name: --a) { bottom: 24px; left: 50%; translate: -50%; }
+    @media (width < 760px) {
+      position-anchor: none; position-area: none; margin: 0; transform-origin: bottom center;
+      left: 8px; right: 8px; bottom: calc(var(--bars) + 8px); top: auto; translate: none; padding: 6px; border-radius: 18px;
+      .icon { width: 44px; height: 44px; } .kind { width: 36px; height: 36px; }
+      overflow-x: auto; scrollbar-width: none; justify-content: flex-start;
+      .icon { flex: none; } .kind { flex: none; }
+    }
   }
   .grp { display: flex; gap: 2px; }
   .sep { width: 1px; height: 22px; background: var(--line); margin: 0 4px; }

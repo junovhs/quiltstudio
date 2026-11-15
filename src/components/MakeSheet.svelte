@@ -6,6 +6,8 @@
   import Thumb from './Thumb.svelte';
   import { app, stats, ui, toggleDone } from '../lib/store.svelte';
   import { dim, fmt, yd } from '../lib/calc';
+  import { taps } from '../lib/gestures';
+  import { swipeClose, isPhone } from '../lib/sheet';
 
   const a = $derived(stats());
   const PX = 7; // pixels per inch: everything here is drawn to the same scale
@@ -27,8 +29,10 @@
 
 {#if ui.make}
   <div class="scrim" transition:fade={{ duration: 200 }} onclick={close} role="presentation"></div>
-  <aside class="sheet" transition:fly={{ x: 480, duration: 450, easing: cubicOut }}>
-    <header>
+  <aside class="sheet" transition:fly={isPhone() ? { y: 900, duration: 480, easing: cubicOut, opacity: 1 } : { x: 480, duration: 450, easing: cubicOut }}
+    use:swipeClose={{ close, axis: isPhone() ? 'y' : 'x-right' }}>
+    <span class="grabber" data-grab></span>
+    <header data-grab>
       <span class="title"><Scissors size={18} /></span>
       <span class="size">{dim(a.size.w, a.size.h)}</span>
       <span class="prog" title="{doneCount} / {keys.length}">
@@ -58,7 +62,7 @@
         <section class="cuts">
           {#each y.cuts as c, i}
             <div class="piece" class:done={done(c.key)} in:scale={{ start: 0.7, delay: 80 + i * 30, duration: 450, easing: backOut }}
-              title="{dim(c.w, c.h)}{c.trimTo ? ` → ${fmt(c.trimTo)}` : ''}" ondblclick={() => toggleDone(c.key)} role="button" tabindex="-1">
+              title="{dim(c.w, c.h)}{c.trimTo ? ` → ${fmt(c.trimTo)}` : ''}" use:taps={{ double: () => toggleDone(c.key) }} role="button" tabindex="-1">
               <div class="cut f-{c.f}" style:width="{px(c.w)}px" style:height="{px(c.h)}px">
                 {#if c.shape !== 'rect'}
                   <svg viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -79,7 +83,7 @@
       <h3><Layers size={15} /></h3>
       <section class="flow">
         {#each a.units as u, i}
-          <div class="piece" class:done={done(u.key)} title="{dim(u.w, u.h)}" ondblclick={() => toggleDone(u.key)} role="button" tabindex="-1" in:scale={{ start: 0.7, delay: 80 + i * 40, duration: 450, easing: backOut }}>
+          <div class="piece" class:done={done(u.key)} title="{dim(u.w, u.h)}" use:taps={{ double: () => toggleDone(u.key) }} role="button" tabindex="-1" in:scale={{ start: 0.7, delay: 80 + i * 40, duration: 450, easing: backOut }}>
             <div class="unit" style:width="{px(u.w)}px" style:height="{px(u.h)}px"><Tile c={u.c} /></div>
             <span class="n count">{u.qty}</span>
             <span class="reveal">{dim(u.w, u.h)}</span>
@@ -88,7 +92,7 @@
         {/each}
         {#each blocks as blk, i}
           <ChevronRight size={18} class="arrow" />
-          <div class="piece" class:done={done('blk|' + blk.id)} title="{dim(blk.w, blk.h)}" ondblclick={() => toggleDone('blk|' + blk.id)} role="button" tabindex="-1" in:scale={{ start: 0.7, delay: 120 + i * 50, duration: 450, easing: backOut }}>
+          <div class="piece" class:done={done('blk|' + blk.id)} title="{dim(blk.w, blk.h)}" use:taps={{ double: () => toggleDone('blk|' + blk.id) }} role="button" tabindex="-1" in:scale={{ start: 0.7, delay: 120 + i * 50, duration: 450, easing: backOut }}>
             <div class="unit" style:width="{px(blk.w, 110)}px" style:height="{px(blk.h, 110)}px"><Thumb id={blk.id} /></div>
             <span class="n count">{blk.n}</span>
             <span class="reveal">{dim(blk.w, blk.h)}</span>
@@ -140,4 +144,13 @@
   .bar { width: 90px; height: 8px; border-radius: 99px; background: var(--sunk); overflow: hidden;
     i { display: block; height: 100%; background: oklch(62% 0.16 150); border-radius: inherit; transition: width .6s var(--spring); } }
   .all { width: 22px; height: 22px; }
+  .grabber { display: none; }
+  @media (width < 760px) {
+    .sheet { top: calc(env(safe-area-inset-top) + 28px); width: 100vw; border-radius: 22px 22px 0 0; padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -16px 50px oklch(30% 0.04 50 / 22%); }
+    .grabber { display: block; align-self: center; width: 40px; height: 5px; margin-top: 8px; border-radius: 99px; background: var(--line); }
+    header { padding: 6px 12px 8px 16px; touch-action: none; }
+    .body { padding-inline: 16px; padding-bottom: 40px; }
+    .bar { width: 64px; }
+    .cuts, .flow { gap: 22px 18px; }
+  }
 </style>

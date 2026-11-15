@@ -7,6 +7,7 @@
   import { app, edit, projects, openProject, newProject, deleteProject, getImageBlob, setImage, ui } from '../lib/store.svelte';
   import { blankDoc, type Doc } from '../lib/model';
   import { oneSheet } from '../lib/render';
+  import { swipeClose, isPhone } from '../lib/sheet';
 
   let armed = $state<string | null>(null);   // trash needs a second tap
   let busy = $state<string | null>(null);
@@ -14,6 +15,15 @@
   const others = $derived(projects.list.filter(p => p.id !== projects.current));
   const safe = (s: string) => (s || 'quilt').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').toLowerCase() || 'quilt';
 
+  /* on iPhone this opens the share sheet (Save Image, Messages, Files…); elsewhere it downloads */
+  async function deliver(blob: Blob, name: string, type: string) {
+    const file = new File([blob], name, { type });
+    if (navigator.canShare?.({ files: [file] }) && matchMedia('(pointer: coarse)').matches) {
+      try { await navigator.share({ files: [file], title: app.doc.name }); return; }
+      catch (e) { if ((e as DOMException).name === 'AbortError') return; }
+    }
+    download(blob, name);
+  }
   function download(blob: Blob, name: string) {
     const url = URL.createObjectURL(blob);
     Object.assign(document.createElement('a'), { href: url, download: name }).click();
@@ -28,7 +38,7 @@
       const blob = f.image && await getImageBlob(f.id);
       if (blob) images[f.id] = await new Promise<string>(r => { const fr = new FileReader(); fr.onload = () => r(fr.result as string); fr.readAsDataURL(blob); });
     }
-    download(new Blob([JSON.stringify({ app: 'quiltstudio', doc: $state.snapshot(app.doc), images })], { type: 'application/json' }), `${safe(app.doc.name ?? '')}.quilt`);
+    await deliver(new Blob([JSON.stringify({ app: 'quiltstudio', doc: $state.snapshot(app.doc), images })], { type: 'application/json' }), `${safe(app.doc.name ?? '')}.quilt`, 'application/json');
     busy = null;
   }
   async function openFile(e: Event) {
@@ -45,7 +55,7 @@
   let shake = $state(false);
   async function picture() {
     busy = 'png';
-    try { download(await oneSheet($state.snapshot(app.doc) as Doc, app.images), `${safe(app.doc.name ?? '')}.png`); }
+    try { await deliver(await oneSheet($state.snapshot(app.doc) as Doc, app.images), `${safe(app.doc.name ?? '')}.png`, 'image/png'); }
     finally { busy = null; }
   }
   function duplicate() {
@@ -65,8 +75,10 @@
 
 {#if ui.projects}
   <div class="scrim" transition:fade={{ duration: 200 }} onclick={close} role="presentation"></div>
-  <aside class="drawer" transition:fly={{ x: -440, duration: 450, easing: cubicOut }}>
-    <header>
+  <aside class="drawer" transition:fly={isPhone() ? { y: 900, duration: 480, easing: cubicOut, opacity: 1 } : { x: -440, duration: 450, easing: cubicOut }}
+    use:swipeClose={{ close, axis: isPhone() ? 'y' : 'x-left' }}>
+    <span class="grabber" data-grab></span>
+    <header data-grab>
       <input class="name" type="text" value={app.doc.name} onchange={e => edit(() => (app.doc.name = e.currentTarget.value))} />
       <button class="icon" onclick={close}><X size={18} /></button>
     </header>
@@ -134,4 +146,13 @@
   .card:hover .del { opacity: 1; scale: 1; }
   @keyframes spin { to { rotate: 360deg; } }
   @keyframes shake { 20%, 60% { translate: -6px; } 40%, 80% { translate: 6px; } }
+  .grabber { display: none; }
+  @media (width < 760px) {
+    .drawer { top: calc(env(safe-area-inset-top) + 28px); width: 100vw; border-radius: 22px 22px 0 0; padding: 4px 18px calc(24px + env(safe-area-inset-bottom)); box-shadow: 0 -16px 50px oklch(30% 0.04 50 / 22%); }
+    .grabber { display: block; align-self: center; flex: none; width: 40px; height: 5px; margin: 4px 0 2px; border-radius: 99px; background: var(--line); }
+    header { touch-action: none; }
+    .del { opacity: 1; scale: 1; }
+    .current { height: 200px; }
+    .act { height: 88px; }
+  }
 </style>

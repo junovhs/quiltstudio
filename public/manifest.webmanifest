@@ -1,0 +1,16 @@
+{
+  "name": "QuiltStudio",
+  "short_name": "Quilt",
+  "description": "Design quilts from simple shapes and see exactly what to cut.",
+  "id": "/",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f5efe4",
+  "theme_color": "#f5efe4",
+  "categories": ["lifestyle", "productivity"],
+  "icons": [
+    { "src": "/icons/v1/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icons/v1/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

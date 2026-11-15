@@ -70,6 +70,10 @@
     box-shadow: 0 2px 6px oklch(30% 0.04 50 / 12%), 0 20px 50px oklch(30% 0.04 50 / 24%);
     display: grid; gap: 14px; transform-origin: top left;
   }
+  @media (width < 760px) {
+    .pop { left: 8px !important; right: 8px; top: auto !important; bottom: calc(var(--bars) + 8px); width: auto; transform-origin: bottom center; }
+    .tpl { padding: 6px; }
+  }
   .close { position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; color: var(--muted); }
   .head { display: flex; gap: 14px; align-items: center; }
   .piece { position: relative; width: 64px; max-height: 64px; flex: none; border-radius: 4px; overflow: hidden; box-shadow: var(--shadow); container-type: size; }

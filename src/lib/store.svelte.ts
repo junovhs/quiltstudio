@@ -76,6 +76,12 @@ export function begin() {
   future.length = 0;
   sync();
 }
+/** throw away the change in progress (e.g. a paint stroke that turned into a pinch) */
+export function rollback() {
+  if (!past.length) return;
+  app.doc = JSON.parse(past.pop()!);
+  fixScope(); sync(); save();
+}
 export function undo() {
   if (!past.length) return;
   future.push(snapshot());
@@ -204,7 +210,7 @@ export const stats = () => analysis;
 export const useCount = (id: string) => analysis.uses.filter(u => u.id === id).reduce((n, u) => n + u.qty, 0);
 
 /* the Make sheet + drawer state */
-export const ui = $state({ make: false, projects: false, measure: null as null | { def: string; i: number; x: number; y: number } });
+export const ui = $state({ make: false, projects: false, palette: false, measure: null as null | { def: string; i: number; x: number; y: number } });
 
 /** tick a Make-sheet item done / not done */
 export function toggleDone(key: string) {

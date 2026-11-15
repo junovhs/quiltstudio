@@ -29,6 +29,10 @@
 
 @layer base {
   html, body { height: 100%; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { touch-action: manipulation; -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
+  /* iOS zooms into inputs under 16px */
+  @media (pointer: coarse) { input, select { font-size: max(16px, 1em); } }
   body {
     background: var(--bg); color: var(--ink);
     font: 13.5px/1.45 "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;

@@ -62,6 +62,12 @@
   .ruler { display: grid; position: relative; transition: grid-template-columns .45s var(--spring), grid-template-rows .45s var(--spring); :global(.dragging) & { transition: none; } }
   .ruler.col { grid-area: top; height: 26px; }
   .ruler.row { grid-area: left; width: 26px; }
+  @media (width < 760px) { .ruler.col { height: 20px; } .ruler.row { width: 20px; } }
+  @media (pointer: coarse) {
+    .col .handle { width: 28px; right: -14px; } .row .handle { height: 28px; bottom: -14px; }
+    .col .handle::after { left: 13px; } .row .handle::after { top: 13px; }
+  }
+  @media (hover: none) { .track:focus-within .tools { opacity: 1; scale: 1; pointer-events: auto; } }
   .track { position: relative; display: grid; place-items: center; min-width: 0; min-height: 0; color: var(--muted); border-radius: 6px; transition: background .2s;
     &:hover { background: var(--accent-soft); color: var(--ink); } }
   .tick { position: absolute; background: var(--line); border-radius: 2px;

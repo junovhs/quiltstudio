@@ -75,7 +75,7 @@
     <div class="spacer"></div>
     <button class="icon" disabled={!app.canUndo} onclick={undo} title="Undo"><Undo2 size={19} /></button>
     <button class="icon" disabled={!app.canRedo} onclick={redo} title="Redo"><Redo2 size={19} /></button>
-    <button class="icon" class:on={app.doc.settings.seams} title="Seams" onclick={() => edit(() => (app.doc.settings.seams = !app.doc.settings.seams))}><Grid3x3 size={19} /></button>
+    <button class="icon seamsbtn" class:on={app.doc.settings.seams} title="Seams" onclick={() => edit(() => (app.doc.settings.seams = !app.doc.settings.seams))}><Grid3x3 size={19} /></button>
     <button class="icon" popovertarget="settings" title="Settings"><Settings size={19} /></button>
     <button class="make" onclick={() => (ui.make = true)} title="What to cut and sew">
       <Scissors size={18} />
@@ -118,6 +118,27 @@
     grid-template: "top top top top" 56px "dock palette stage swatches" 1fr / 56px 232px 1fr 72px;
   }
   .top { grid-area: top; display: flex; align-items: center; gap: 4px; padding: 0 12px 0 14px; border-bottom: 1px solid var(--line); background: var(--panel); min-width: 0; }
+  :global(:root) {
+    @media (width < 760px) {
+      --bars-dock: calc(66px + env(safe-area-inset-bottom));
+      --bars: calc(66px + 58px + env(safe-area-inset-bottom));
+    }
+  }
+  .app { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+  @media (height < 500px) and (width >= 760px) {
+    .app { grid-template: "top top top" calc(44px + env(safe-area-inset-top)) "dock stage swatches" 1fr / calc(56px + env(safe-area-inset-left)) 1fr calc(64px + env(safe-area-inset-right)); }
+    .top { padding: env(safe-area-inset-top) max(10px, env(safe-area-inset-right)) 0 max(10px, env(safe-area-inset-left)); }
+    .seamsbtn, .dots { display: none; }
+  }
+  @media (width < 760px) {
+    .app { grid-template: "top" calc(52px + env(safe-area-inset-top)) "stage" 1fr "swatches" auto "dock" auto / 100%; }
+    .top { padding: env(safe-area-inset-top) max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left)); gap: 0; }
+    .proj { margin-right: 4px; padding-right: 6px; }
+    .crumbs { margin-left: 0; overflow-x: auto; scrollbar-width: none; }
+    .seamsbtn { display: none; }
+    .make { margin-left: 4px; padding: 8px 12px; .dots { display: none; } }
+    #settings { top: calc(56px + env(safe-area-inset-top)); right: 8px; }
+  }
   .proj { display: flex; align-items: center; gap: 8px; padding: 5px 10px 5px 5px; margin-right: 14px; border: 0; border-radius: 12px; background: transparent; color: var(--muted);
     &:hover { background: var(--sunk); color: var(--ink); } }
   .logo { width: 28px; height: 28px; }

@@ -5,7 +5,9 @@
   import { MousePointer2, Paintbrush, PaintBucket, Ruler, Square, Columns2, Rows2, Grid2x2, RefreshCw, RotateCw, FlipHorizontal2, FlipVertical2, Plus, Pencil } from '@lucide/svelte';
   import Tile from './Tile.svelte';
   import Thumb from './Thumb.svelte';
-  import { app, edit, openBlock, scopeId, useCount, type Tool } from '../lib/store.svelte';
+  import { app, edit, openBlock, scopeId, useCount, ui, type Tool } from '../lib/store.svelte';
+  import { taps } from '../lib/gestures';
+  import { swipeClose } from '../lib/sheet';
   import { fabricsOf, makeKind, setRegion, snap, uid, xform, type Content, type Kind, type Sym, type Xf } from '../lib/model';
   import { openPicker } from '../lib/picker.svelte';
 
@@ -25,9 +27,9 @@
   function brushKind(k: Kind) {
     const c = shape(k);
     if (c.k === 'hst' && app.brush.k === 'hst') c.corner = app.brush.corner;
-    app.brush = c; app.tool = 'paint';
+    app.brush = c; app.tool = 'paint'; ui.palette = false;
   }
-  const useBlock = (id: string) => { app.brush = { k: 'inst', ref: id, rot: 0, flip: false }; app.tool = 'paint'; };
+  const useBlock = (id: string) => { app.brush = { k: 'inst', ref: id, rot: 0, flip: false }; app.tool = 'paint'; ui.palette = false; };
   const brushX = (t: Xf) => (app.brush = xform(snap(app.brush), t));
   function pickRegion(e: MouseEvent) {
     const r = (e.target as HTMLElement).closest<HTMLElement>('[data-r]')?.dataset.r;
@@ -53,13 +55,18 @@
       <button class="icon" class:active={app.tool === t} title={tip} onclick={() => (app.tool = t)}><Icon size={19} /></button>
     {/each}
   </div>
+  <!-- phones: the brush opens the palette sheet -->
+  <button class="mbrush" class:active={ui.palette} title="Shapes & blocks" onclick={() => (ui.palette = !ui.palette)}>
+    {#if app.brush.k === 'inst'}<Thumb id={app.brush.ref} rot={app.brush.rot} flip={app.brush.flip} />{:else}<Tile c={app.brush} />{/if}
+  </button>
   <hr />
   {#each SYMS as [s, Icon, tip]}
     <button class="icon sym" class:on={app.sym === s && s !== 'none'} class:off={app.sym === 'none' && s === 'none'} title={tip} onclick={() => (app.sym = s)}><Icon size={17} /></button>
   {/each}
 </nav>
 
-<aside class="palette">
+<aside class="palette" class:sheet-open={ui.palette} use:swipeClose={{ close: () => (ui.palette = false) }}>
+  <span class="grabber" data-grab onclick={() => (ui.palette = false)} role="presentation"></span>
   <div class="brush">
     <button class="preview" title="Brush — click a triangle to change its fabric" onclick={pickRegion}>
       {#key app.brush}
@@ -68,6 +75,11 @@
         </div>
       {/key}
     </button>
+    <div class="msym">
+      {#each SYMS as [s, Icon, tip]}
+        <button class="icon" class:on={app.sym === s} title={tip} onclick={() => (app.sym = s)}><Icon size={17} /></button>
+      {/each}
+    </div>
     <div class="turns">
       <button class="icon" title="Rotate  R" onclick={() => brushX('r')}><RotateCw size={16} /></button>
       <button class="icon" title="Flip  F" onclick={() => brushX('h')}><FlipHorizontal2 size={16} /></button>
@@ -88,11 +100,11 @@
       {@const n = useCount(blk.id)}
       <div class="card" animate:flip={{ duration: 350, easing: backOut }} in:scale={{ start: 0.6, duration: 400, easing: backOut }}
         class:on={app.tool === 'paint' && app.brush.k === 'inst' && app.brush.ref === blk.id} class:editing={scopeId() === blk.id}>
-        <button class="art" title="Paint with this block · double-click to open" onclick={() => useBlock(blk.id)} ondblclick={() => openBlock(blk.id)}>
+        <button class="art" title="Paint with this block · double-click to open" onclick={() => useBlock(blk.id)} use:taps={{ double: () => { ui.palette = false; openBlock(blk.id); } }}>
           <Thumb id={blk.id} />
         </button>
         {#if n}<span class="badge count">{n}</span>{/if}
-        <button class="open" title="Open" onclick={() => openBlock(blk.id)}><Pencil size={12} /></button>
+        <button class="open" title="Open" onclick={() => { ui.palette = false; openBlock(blk.id); }}><Pencil size={12} /></button>
       </div>
     {/each}
     <button class="card add" title="New block" onclick={newBlock}><Plus size={22} /></button>
@@ -130,5 +142,52 @@
   .badge { position: absolute; right: -6px; bottom: -6px; min-width: 26px; padding: 1px 7px; border-radius: 99px; background: var(--ink); color: var(--panel); font-size: 13px; text-align: center; box-shadow: var(--shadow); }
   .open { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 7px; background: var(--panel); box-shadow: var(--shadow);
     opacity: 0; scale: .6; transition: opacity .2s, scale .35s var(--spring); }
+  .mbrush, .grabber, .msym { display: none; }
+  @media (hover: none) { .open { opacity: 1; scale: 1; } }
+
+  /* ---------- phones ---------- */
+  @media (width < 760px) {
+    .dock { flex-direction: row; justify-content: space-between; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); border: 0; border-top: 1px solid var(--line); gap: 6px; }
+    .tools { flex-direction: row; }
+    .dock button.icon { width: 44px; height: 44px; }
+    .tools .pill { width: 44px; height: 44px; translate: calc(var(--i) * 48px) 0; }
+    .tools { gap: 4px; }
+    .dock > hr, .sym { display: none; }
+    .mbrush { display: block; position: relative; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 12px; overflow: hidden; background: var(--sunk);
+      box-shadow: var(--shadow); container-type: size; transition: box-shadow .25s, scale .35s var(--spring);
+      &.active { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent); } }
+    .mbrush { width: 50px; height: 50px; }
+    .palette {
+      position: fixed; z-index: 25; left: 0; right: 0; bottom: var(--bars-dock); max-height: 64dvh;
+      border: 0; border-radius: 22px 22px 0 0; padding: 8px 16px 16px; box-shadow: 0 -12px 40px oklch(30% 0.04 50 / 18%);
+      translate: 0 calc(100% + 80px); transition: translate .45s var(--spring);
+      &.sheet-open { translate: 0 0; }
+    }
+    .grabber { display: block; align-self: center; width: 40px; height: 5px; border-radius: 99px; background: var(--line); margin-bottom: 2px; padding: 4px 0; background-clip: content-box; box-sizing: content-box; }
+    .brush { flex-wrap: wrap; }
+    .preview { width: 68px; height: 68px; }
+    .turns { flex-direction: row; }
+    .msym { display: flex; gap: 2px; background: var(--sunk); border-radius: 12px; padding: 3px; order: 3; width: 100%; justify-content: space-between;
+      button { width: 100%; height: 34px; } button.on { background: var(--panel); color: var(--accent); box-shadow: var(--shadow); } }
+    .shapes { gap: 10px; }
+    .lib { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 12px; }
+  }
+
+  /* ---------- phones on their side ---------- */
+  @media (height < 500px) and (width >= 760px) {
+    .dock { padding: 6px 0; gap: 2px; overflow-y: auto; scrollbar-width: none; }
+    .dock > hr, .sym { display: none; }
+    .mbrush { display: block; position: relative; width: 40px; height: 40px; flex: none; padding: 0; border: 0; border-radius: 11px; overflow: hidden; background: var(--sunk); box-shadow: var(--shadow); container-type: size;
+      &.active { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent); } }
+    .palette {
+      position: fixed; z-index: 25; top: 0; bottom: 0; left: 56px; width: 300px; padding: calc(10px + env(safe-area-inset-top)) 14px 14px max(14px, env(safe-area-inset-left));
+      border-radius: 0 20px 20px 0; box-shadow: 12px 0 40px oklch(30% 0.04 50 / 18%);
+      translate: calc(-100% - 80px) 0; transition: translate .45s var(--spring);
+      &.sheet-open { translate: 0 0; }
+    }
+    .msym { display: flex; gap: 2px; background: var(--sunk); border-radius: 12px; padding: 3px; order: 3; width: 100%; justify-content: space-between;
+      button { width: 100%; height: 32px; } button.on { background: var(--panel); color: var(--accent); box-shadow: var(--shadow); } }
+    .brush { flex-wrap: wrap; } .turns { flex-direction: row; }
+  }
   .add { border: 2px dashed var(--line); background: transparent; color: var(--muted); &:hover { color: var(--accent); border-color: var(--accent); } }
 </style>
