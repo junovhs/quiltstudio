@@ -5,7 +5,7 @@
   import Tile from './Tile.svelte';
   import { app, edit, enter, scope, scopeId, ui } from '../lib/store.svelte';
   import { cellSize, fmt } from '../lib/calc';
-  import { fabricsOf, groupToBlock, makeKind, merge, snap, splitCell, xform, type Kind, type Xf } from '../lib/model';
+  import { fabricsOf, groupToBlock, makeKind, merge, mergeSame, snap, splitCell, xform, cellIndexAt, type Kind, type Xf } from '../lib/model';
 
   const b = $derived(scope());
   const sel = $derived(app.sel.filter(i => b.cells[i]));
@@ -18,7 +18,21 @@
   const xf = (t: Xf) => each(i => { b.cells[i].c = xform(snap(b.cells[i].c), t); });
   const setKind = (k: Kind) => each(i => { const c = b.cells[i]; c.c = makeKind(k, c.c.k === 'inst' ? [app.fabric] : fabricsOf(c.c), app.fabric); });
   const sample = (k: Kind) => makeKind(k, first && first.c.k !== 'inst' && first.c.k !== 'empty' ? fabricsOf(first.c) : [app.fabric, 'cream'], app.fabric);
-  function doMerge() { edit(() => { const j = merge(b, sel); if (j != null) app.sel = [j]; }); }
+  function doMerge() {
+    edit(() => {
+      // keep a pinned piece pinned to the same spot (and its new size) through the join
+      const a = app.doc.settings.anchor, pin = a && a.def === scopeId() ? { x: b.cells[a.i]?.x, y: b.cells[a.i]?.y } : null;
+      const sameAll = sel.every(i => JSON.stringify(b.cells[i].c) === JSON.stringify(b.cells[sel[0]].c));
+      if (sel.length === 1 || sameAll) mergeSame(b, sel);
+      else { const j = merge(b, sel); if (j != null) app.sel = [j]; }
+      if (sel.length === 1 || sameAll) app.sel = [];
+      if (a && pin && pin.x != null) {
+        a.i = cellIndexAt(b, pin.x, pin.y!);
+        const c = cellSize(app.doc, a.def, a.i);
+        if (c) a.size = Math.min(c.w, c.h);
+      }
+    });
+  }
   function doGroup() { edit(() => { if (groupToBlock(app.doc, b, sel, 'Block')) app.sel = [b.cells.length - 1]; }); }
   function doSplit(n: number, m: number) { splitting = false; if (first) edit(() => splitCell(app.doc, b, sel[0], n, m, 'Block')); }
   const clear = () => each(i => { b.cells[i].c = { k: 'empty' }; });
@@ -65,7 +79,9 @@
         <button class="kind" class:on={first.c.k === k} onclick={() => setKind(k)}><Tile c={sample(k)} /></button>
       {/each}
       <span class="sep"></span>
-      {#if sel.length > 1}<button class="icon" title="Join into one piece" onclick={doMerge}><Combine size={17} /></button>{/if}
+      {#if first.c.k !== 'inst' && first.c.k !== 'empty'}
+        <button class="icon" title={sel.length > 1 ? 'Join these into bigger pieces' : 'Join with touching pieces of the same fabric'} onclick={doMerge}><Combine size={17} /></button>
+      {:else if sel.length > 1}<button class="icon" title="Join into one piece" onclick={doMerge}><Combine size={17} /></button>{/if}
       <button class="icon" title="Make a block from this  G" onclick={doGroup}><Group size={17} /></button>
       {#if sel.length === 1}<button class="icon" title="Cut into smaller pieces" onclick={() => (splitting = true)}><Grid2x2 size={17} /></button>{/if}
       <button class="icon" title="Clear  ⌫" onclick={clear}><Trash2 size={17} /></button>

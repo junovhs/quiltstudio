@@ -352,3 +352,72 @@ export function blankDoc(): Doc {
   d.settings.anchor = null;
   return d;
 }
+
+/* ---------------- join same-fabric pieces ---------------- */
+const same = (a: Content, b: Content) => JSON.stringify(a) === JSON.stringify(b);
+
+/**
+ * Join pieces that are the same (fabric + shape) into the biggest rectangles possible.
+ * One cell selected: every identical piece in the block. Several: just those.
+ * Returns how many joins were made.
+ */
+export function mergeSame(b: Block, idxs: number[]): number {
+  const occ = () => {
+    const g: number[][] = b.rows.map(() => b.cols.map(() => -1));
+    b.cells.forEach((c, i) => { for (let y = c.y; y < c.y + c.rs; y++) for (let x = c.x; x < c.x + c.cs; x++) g[y][x] = i; });
+    return g;
+  };
+  let pool = new Set(idxs);
+  if (idxs.length === 1) {
+    // every piece of this same fabric + shape in the block (each touching group joins up)
+    const start = b.cells[idxs[0]];
+    pool = new Set(b.cells.map((c, i) => (same(c.c, start.c) ? i : -1)).filter(i => i >= 0));
+  }
+  // greedy: take the top-left piece left in the pool, grow right then down while everything matches
+  let joins = 0;
+  let poolCells = [...pool].map(i => b.cells[i]);
+  while (poolCells.length) {
+    poolCells.sort((p, q) => p.y - q.y || p.x - q.x);
+    const first = poolCells[0], g = occ();
+    const inPool = (x: number, y: number) => {
+      const j = g[y]?.[x];
+      return j != null && j >= 0 && poolCells.includes(b.cells[j]) && same(b.cells[j].c, first.c);
+    };
+    let x1 = first.x + first.cs;
+    while (x1 < b.cols.length && inPool(x1, first.y)) x1++;
+    let y1 = first.y + 1;
+    const rowOk = (y: number) => { for (let x = first.x; x < x1; x++) if (!inPool(x, y)) return false; return true; };
+    while (y1 < b.rows.length && rowOk(y1)) y1++;
+    const box = { x0: first.x, y0: first.y, x1, y1 };
+    const inside = cellsInBox(b, box);
+    const group = inside?.filter(i => poolCells.includes(b.cells[i])) ?? [];
+    if (inside && group.length === inside.length && group.length > 1) {
+      const keep = first.c;
+      const firstIdx = b.cells.indexOf(first);
+      const ordered = [firstIdx, ...group.filter(i => i !== firstIdx)];
+      const used = ordered.map(i => b.cells[i]);
+      merge(b, ordered);
+      b.cells[b.cells.length - 1].c = keep;
+      poolCells = poolCells.filter(c => !used.includes(c));
+      joins++;
+    } else {
+      poolCells = poolCells.filter(c => c !== first);
+    }
+  }
+  if (joins) collapseTracks(b);
+  return joins;
+}
+
+/** remove grid lines nothing starts on (e.g. a 4×4 that became 2×2 pieces is now a 2×2 grid) */
+export function collapseTracks(b: Block) {
+  for (const axis of ['col', 'row'] as const) {
+    const p = axis === 'col' ? 'x' : 'y', s = axis === 'col' ? 'cs' : 'rs';
+    const tracks = axis === 'col' ? b.cols : b.rows;
+    for (let k = tracks.length - 1; k >= 1; k--) {
+      if (b.cells.some(c => c[p] === k)) continue;
+      tracks[k - 1] += tracks[k];
+      tracks.splice(k, 1);
+      for (const c of b.cells) { if (c[p] > k) c[p]--; else if (c[p] < k && c[p] + c[s] > k) c[s]--; }
+    }
+  }
+}
