@@ -15,7 +15,13 @@ npm run deploy    # build + deploy to Cloudflare Pages (project "quiltstudio")
 
 Stack: Svelte 5 + TypeScript + Vite, modern CSS (container queries, anchor positioning,
 popover API, view transitions, oklch/light-dark, @property). Designs save in the browser;
-fabric photos are stored in IndexedDB. Export/import from the ⚙ menu.
+fabric photos are stored in IndexedDB. Export/import from the project manager (folder button).
+
+Accounts: optional email/password sign-in through Supabase, the same shared project noceremony
+uses (`.env` holds the public URL + publishable key). Signed in, every quilt also saves to
+`public.quiltstudio_projects` and syncs across devices; the newest copy wins. Fabric photos stay
+on the device. The table comes from `supabase/migrations/`; `supabase/seed-real-quilt.sql` puts
+the "Real quilt" design into one account.
 
 Auto-deploy: commits on `main` deploy automatically via a local git hook
 (`scripts/autodeploy.sh`, log in `.wrangler/deploy.log`). On a fresh clone, enable it with

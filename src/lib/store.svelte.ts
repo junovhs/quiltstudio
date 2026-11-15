@@ -15,6 +15,17 @@ export interface ProjectMeta { id: string; name: string; updated: number; thumb?
 
 const read = <T>(k: string, fallback: T): T => { try { return JSON.parse(localStorage.getItem(k) ?? 'null') ?? fallback; } catch { return fallback; } };
 const write = (k: string, v: unknown) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+/** the cloud (when signed in) listens here for saved and deleted projects */
+export const hooks = { saved: (_id: string) => {}, deleted: (_id: string) => {} };
+export const readDoc = (id: string) => { const d = read<Doc | null>(docKey(id), null); return d?.v === 3 ? d : null; };
+/** store a project that came from the cloud (doesn't touch what's open) */
+export function storeProject(meta: ProjectMeta, doc: Doc) {
+  write(docKey(meta.id), doc);
+  const i = projects.list.findIndex(p => p.id === meta.id);
+  if (i < 0) projects.list.push(meta); else projects.list[i] = { ...projects.list[i], ...meta };
+  projects.list.sort((a, b) => b.updated - a.updated);
+  write(LIST, $state.snapshot(projects.list));
+}
 
 function normalise(d: Doc): Doc {
   const tplV = d.settings?.tplVersion ?? 1, hadSeams = !!d.settings?.templateSeams;
@@ -132,11 +143,12 @@ function persist() {
     const m = projects.list.find(p => p.id === id);
     if (!m || id !== projects.current) return;
     try { m.thumb = await thumbnail($state.snapshot(app.doc) as Doc, app.images, 120); write(LIST, $state.snapshot(projects.list)); } catch {}
+    hooks.saved(id);
   }, 800);
 }
 
 function load(id: string, doc: Doc) {
-  clearTimeout(t); persist();                 // finish saving the one we're leaving
+  if (id !== projects.current) { clearTimeout(t); persist(); }  // finish saving the one we're leaving
   for (const u of Object.values(app.images)) URL.revokeObjectURL(u);
   app.images = {};
   projects.current = id; write(CUR, id);
@@ -144,6 +156,21 @@ function load(id: string, doc: Doc) {
   past.length = 0; future.length = 0; sync();
   loadImages();
   persist();
+}
+/** draw thumbnails for projects that don't have one yet (saved before thumbnails, or never edited) */
+export async function fillThumbs() {
+  for (const m of projects.list) {
+    if (m.thumb || m.id === projects.current) continue;
+    const d = readDoc(m.id);
+    if (!d) continue;
+    try { m.thumb = await thumbnail(normalise(d), {}, 120); } catch {}
+  }
+  write(LIST, $state.snapshot(projects.list));
+}
+/** open a project, even the one already open (used when a newer copy arrives from the cloud) */
+export function showProject(id: string) {
+  const doc = readDoc(id);
+  if (doc) load(id, structuredClone(doc));
 }
 export function openProject(id: string) {
   if (id === projects.current) return;
@@ -163,6 +190,7 @@ export async function deleteProject(id: string) {
   localStorage.removeItem(docKey(id));
   projects.list = projects.list.filter(p => p.id !== id);
   write(LIST, $state.snapshot(projects.list));
+  hooks.deleted(id);
   if (id === projects.current) {
     if (projects.list.length) openProject(projects.list[0].id);
     else newProject();
@@ -224,7 +252,7 @@ export const stats = () => analysis;
 export const useCount = (id: string) => analysis.uses.filter(u => u.id === id).reduce((n, u) => n + u.qty, 0);
 
 /* the Make sheet + drawer state */
-export const ui = $state({ make: false, projects: false, palette: false, sizes: false, glow: [] as { def: string; i: number }[], print: null as null | string[], measure: null as null | { def: string; i: number; x: number; y: number } });
+export const ui = $state({ make: false, projects: false, account: false, palette: false, sizes: false, glow: [] as { def: string; i: number }[], print: null as null | string[], measure: null as null | { def: string; i: number; x: number; y: number } });
 
 /** tick a Make-sheet item done / not done */
 export function toggleDone(key: string) {

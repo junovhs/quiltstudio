@@ -71,7 +71,7 @@
     .col .handle { width: 28px; right: -14px; } .row .handle { height: 28px; bottom: -14px; }
     .col .handle::after { left: 13px; } .row .handle::after { top: 13px; }
   }
-  @media (hover: none) { .track:focus-within .tools { opacity: 1; scale: 1; pointer-events: auto; } }
+  @media (hover: none) { .track:focus-within .tools { opacity: 1; scale: 1; visibility: visible; } }
   .track { position: relative; display: grid; place-items: center; min-width: 0; min-height: 0; color: var(--muted); border-radius: 6px; transition: background .2s;
     &:hover { background: var(--accent-soft); color: var(--ink); } }
   .frozen .tick { background: var(--ink); opacity: .5; }
@@ -85,9 +85,12 @@
   input { width: 5ch; field-sizing: fixed; border: 0; background: transparent; text-align: center; font-size: 11.5px; font-weight: 650; color: inherit; padding: 0;
     .row & { writing-mode: vertical-rl; rotate: 180deg; width: auto; height: 5ch; }
     &:focus { background: var(--panel); outline: 2px solid var(--accent); border-radius: 4px; } }
-  .tools { position: absolute; display: flex; gap: 2px; opacity: 0; scale: .7; pointer-events: none; transition: opacity .2s, scale .3s var(--spring);
-    .col & { top: -24px; } .row & { left: -28px; flex-direction: column; }
-    .track:hover & { opacity: 1; scale: 1; pointer-events: auto; }
+  /* the buttons sit outside the ruler; padding on the ruler side bridges the gap so the mouse
+     never leaves the hover area on the way to them, and they linger a moment before hiding */
+  .tools { position: absolute; z-index: 3; display: flex; gap: 2px; opacity: 0; scale: .7; visibility: hidden;
+    transition: opacity .2s .35s, scale .3s var(--spring) .35s, visibility 0s .55s;
+    .col & { bottom: 100%; padding: 4px 6px 6px; } .row & { right: 100%; padding: 6px 6px 6px 4px; flex-direction: column; }
+    .track:hover &, &:hover { opacity: 1; scale: 1; visibility: visible; transition: opacity .2s, scale .3s var(--spring), visibility 0s; }
     button { width: 20px; height: 20px; padding: 0; display: grid; place-items: center; border-radius: 6px; border: 0; background: var(--panel); box-shadow: var(--shadow); } }
   .handle { position: absolute; z-index: 2; touch-action: none;
     .col & { right: -6px; top: -4px; bottom: -10px; width: 12px; cursor: col-resize; }

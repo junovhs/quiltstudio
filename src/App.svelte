@@ -10,6 +10,8 @@
   import MeasurePop from './components/MeasurePop.svelte';
   import MakeSheet from './components/MakeSheet.svelte';
   import Projects from './components/Projects.svelte';
+  import Account from './components/Account.svelte';
+  import { cloud } from './lib/cloud.svelte';
   import Print from './components/Print.svelte';
   import DragGhost from './components/DragGhost.svelte';
   import Tidy from './components/Tidy.svelte';
@@ -57,7 +59,7 @@
     const mod = e.metaKey || e.ctrlKey, k = e.key.toLowerCase();
     if (mod && k === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
     if (mod && k === 'y') { e.preventDefault(); redo(); return; }
-    if (mod || ui.make || ui.projects || ui.print) return;
+    if (mod || ui.make || ui.projects || ui.account || ui.print) return;
     const b = scope();
     switch (k) {
       case 'v': app.tool = 'select'; break;
@@ -82,8 +84,8 @@
 
 <div class="app" class:with-sizes={ui.sizes}>
   <header class="top">
-    <button class="proj" title="My quilts" onclick={() => (ui.projects = true)}>
-      <img class="logo" src="/favicon.svg" alt="" /><FolderOpen size={17} />
+    <button class="proj" title={cloud.email ? `My quilts · ${cloud.email}` : 'My quilts'} onclick={() => (ui.projects = true)}>
+      <img class="logo" src="/favicon.svg" alt="" /><FolderOpen size={17} />{#if cloud.email}<span class="synced" class:bad={cloud.state === 'error' || cloud.state === 'offline'}></span>{/if}
     </button>
     <nav class="crumbs">
       <button class="crumb" class:here={!app.path.length} title="Quilt" onclick={() => goTo(0)}><House size={18} /></button>
@@ -126,6 +128,7 @@
 <MeasurePop />
 <MakeSheet />
 <Projects />
+<Account />
 <Print />
 <DragGhost />
 <Tidy />
@@ -191,6 +194,8 @@
   .proj { display: flex; align-items: center; gap: 8px; padding: 5px 10px 5px 5px; margin-right: 14px; border: 0; border-radius: 12px; background: transparent; color: var(--muted);
     &:hover { background: var(--sunk); color: var(--ink); } }
   .logo { width: 28px; height: 28px; }
+  .proj { position: relative; }
+  .synced { position: absolute; left: 26px; top: 4px; width: 9px; height: 9px; border-radius: 50%; background: oklch(64% 0.14 150); box-shadow: 0 0 0 2px var(--panel); &.bad { background: var(--warn); } }
   .crumbs { display: flex; align-items: center; gap: 4px; min-width: 0; :global(.chev) { color: var(--muted); flex: none; } }
   .crumb { width: 38px; height: 38px; padding: 5px; border: 0; background: transparent; border-radius: 10px; display: grid; place-items: center; color: var(--muted);
     &:hover { background: var(--sunk); } &.here { background: var(--accent-soft); color: var(--accent); } }
