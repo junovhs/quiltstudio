@@ -17,10 +17,17 @@ const read = <T>(k: string, fallback: T): T => { try { return JSON.parse(localSt
 const write = (k: string, v: unknown) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
 
 function normalise(d: Doc): Doc {
+  const tplV = d.settings?.tplVersion ?? 1, hadSeams = !!d.settings?.templateSeams;
   d.settings = { ...DEFAULT_SETTINGS, ...d.settings };
   if (d.settings.templates.join() === '1,1.5,2,2.5,3,3.5,4,4.5,5,6') d.settings.templates = [...DEFAULT_SETTINGS.templates];
-  if (!d.settings.templateSeams || d.settings.templateSeams === DEFAULT_SETTINGS.templateSeams) {
+  if (!hadSeams) {
     d.settings.templateSeams = Object.fromEntries(d.settings.templates.map(t => [t, (d.settings.finishedTemplates ?? []).includes(t) ? 0 : 0.25]));
+  }
+  // the 5″ guide (no seam allowance)
+  if (tplV < 2) {
+    if (!d.settings.templates.includes(5)) d.settings.templates = [...d.settings.templates, 5].sort((a, b) => a - b);
+    d.settings.templateSeams = { ...d.settings.templateSeams, 5: 0 };
+    d.settings.tplVersion = 2;
   }
   d.progress ??= {};
   d.name ??= 'My quilt';

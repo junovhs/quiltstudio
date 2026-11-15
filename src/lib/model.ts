@@ -40,11 +40,14 @@ export interface Settings {
   finishedTemplates: number[];
   /** each template's own built-in seam allowance: 0 = finished size (e.g. hard plastic 1″), ¼ (e.g. the 2″) … */
   templateSeams: Record<string, number>;
+  /** bumps when we learn about templates the quilter owns */
+  tplVersion?: number;
 }
 export const DEFAULT_SETTINGS: Settings = {
   seam: 0.25, wof: 42, binding: 'binding', bindingWidth: 0.375, seams: true,
-  anchor: null, hst: 'trim', templates: [1, 2, 3, 4, 6, 9], finishedTemplates: [1],
-  templateSeams: { 1: 0, 2: 0.25, 3: 0.25, 4: 0.25, 6: 0.25, 9: 0.25 },
+  anchor: null, hst: 'trim', templates: [1, 2, 3, 4, 5, 6, 9], finishedTemplates: [1, 5],
+  templateSeams: { 1: 0, 2: 0.25, 3: 0.25, 4: 0.25, 5: 0, 6: 0.25, 9: 0.25 },
+  tplVersion: 2,
 };
 export interface Doc {
   v: 3; root: string; fabrics: Fabric[]; blocks: Record<string, Block>; settings: Settings;
