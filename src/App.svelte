@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { scale } from 'svelte/transition';
   import { backOut } from 'svelte/easing';
-  import { Undo2, Redo2, Scissors, Settings, House, ChevronRight, Grid3x3, Ban, FolderOpen, Printer, Wand2 } from '@lucide/svelte';
+  import { Undo2, Redo2, Scissors, Settings, House, ChevronRight, Grid3x3, Ban, FolderOpen, Printer, Wand2, TriangleAlert } from '@lucide/svelte';
   import Canvas from './components/Canvas.svelte';
   import Palette from './components/Palette.svelte';
   import Swatches from './components/Swatches.svelte';
@@ -14,6 +14,8 @@
   import DragGhost from './components/DragGhost.svelte';
   import Tidy from './components/Tidy.svelte';
   import Sizes from './components/Sizes.svelte';
+  import Glow from './components/Glow.svelte';
+  import { pieces } from './lib/sizes';
   import Picker from './components/Picker.svelte';
   import Thumb from './components/Thumb.svelte';
   import { app, edit, undo, redo, goTo, scope, enter, loadImages, ui, stats } from './lib/store.svelte';
@@ -27,6 +29,7 @@
   }).join('\n'));
 
   onMount(() => { loadImages(); });
+  const oddCount = $derived(pieces(app.doc).filter(p => p.status === 'odd' || p.status === 'near').length);
   // finished size of whatever we're looking at: the quilt, or the block we've opened
   const here = $derived.by(() => {
     const a = stats(), id = app.path.at(-1);
@@ -69,7 +72,7 @@
 <svelte:window onkeydown={key} />
 <svelte:head>{@html `<style>${fabricCss}</style>`}</svelte:head>
 
-<div class="app">
+<div class="app" class:with-sizes={ui.sizes}>
   <header class="top">
     <button class="proj" title="My quilts" onclick={() => (ui.projects = true)}>
       <img class="logo" src="/favicon.svg" alt="" /><FolderOpen size={17} />
@@ -88,7 +91,9 @@
     <button class="icon" disabled={!app.canUndo} onclick={undo} title="Undo"><Undo2 size={19} /></button>
     <button class="icon" disabled={!app.canRedo} onclick={redo} title="Redo"><Redo2 size={19} /></button>
     <button class="icon seamsbtn" class:on={app.doc.settings.seams} title="Seams" onclick={() => edit(() => (app.doc.settings.seams = !app.doc.settings.seams))}><Grid3x3 size={19} /></button>
-    <Sizes />
+    <button class="icon sizesbtn" class:on={ui.sizes} class:bad={oddCount} title="Odd sizes" onclick={() => { ui.sizes = !ui.sizes; if (!ui.sizes) ui.glow = []; }}>
+      <TriangleAlert size={19} />{#if oddCount}<span class="badge">{oddCount}</span>{/if}
+    </button>
     <button class="icon" popovertarget="tidy" title="Tidy sizes: snap to normal sizes"><Wand2 size={19} /></button>
     <button class="icon" title="Print blocks" onclick={() => (ui.print = app.path.length ? [app.path.at(-1)!] : [app.doc.root, ...stats().order])}><Printer size={19} /></button>
     <button class="icon" popovertarget="settings" title="Settings"><Settings size={19} /></button>
@@ -100,8 +105,10 @@
 
   <Palette />
   <Canvas />
+  <Sizes />
   <Swatches />
 </div>
+<Glow />
 
 <ContextBar />
 <MeasurePop />
@@ -157,6 +164,15 @@
     .make { margin-left: 4px; padding: 8px 12px; .dots { display: none; } }
     #settings { top: calc(56px + env(safe-area-inset-top)); right: 8px; }
   }
+  .app.with-sizes { grid-template: "top top top top top" 56px "dock palette stage sizes swatches" 1fr / 56px 232px 1fr 330px 72px; }
+  @media (height < 500px) and (width >= 760px) {
+    .app.with-sizes { grid-template: "top top top top" calc(44px + env(safe-area-inset-top)) "dock stage sizes swatches" 1fr / calc(56px + env(safe-area-inset-left)) 1fr 300px calc(64px + env(safe-area-inset-right)); }
+  }
+  @media (width < 760px) {
+    .app.with-sizes { grid-template: "top" calc(52px + env(safe-area-inset-top)) "stage" 1fr "sizes" auto "swatches" auto "dock" auto / 100%; }
+  }
+  .sizesbtn { position: relative; &.bad { color: oklch(62% 0.16 55); } &.on { color: var(--accent-ink); }
+    .badge { position: absolute; top: 2px; right: 0; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 99px; background: oklch(62% 0.16 55); color: white; font-size: 10px; font-weight: 800; display: grid; place-items: center; } }
   .proj { display: flex; align-items: center; gap: 8px; padding: 5px 10px 5px 5px; margin-right: 14px; border: 0; border-radius: 12px; background: transparent; color: var(--muted);
     &:hover { background: var(--sunk); color: var(--ink); } }
   .logo { width: 28px; height: 28px; }

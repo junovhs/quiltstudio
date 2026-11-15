@@ -21,7 +21,7 @@
         data-def={id} data-i={i}
         style:grid-column="{cell.x + 1} / span {cell.cs}"
         style:grid-row="{cell.y + 1} / span {cell.rs}">
-        {#key cell.c}
+        {#key JSON.stringify(cell.c)}
           <div class="pop" in:scale={{ start: 0.6, duration: 420, easing: backOut }}>
             {#if cell.c.k === 'inst'}
               <div class="inst" class:odd={cell.c.rot % 2 === 1}

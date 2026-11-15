@@ -17,9 +17,10 @@ const near = (a: number, b: number) => Math.abs(a - b) < 1 / 32;
 const onQuarter = (v: number) => near(v * 4, Math.round(v * 4));
 
 export function pieces(doc: Doc): Piece[] {
-  const s = doc.settings.seam, T = doc.settings.templates;
+  const s = doc.settings.seam, T = doc.settings.templates, F = doc.settings.finishedTemplates ?? [];
   const out = new Map<string, Piece>();
-  const tpl = (v: number) => T.find(t => near(t, v)) ?? null;
+  // a template matches if its size is the cut size (seam included) — or, for finished-size templates, the finished size
+  const tpl = (cut: number, fin: number) => T.find(t => (F.includes(t) ? near(t, fin) : near(t, cut))) ?? null;
 
   function add(c: Content, w: number, h: number, def: string, i: number) {
     let kind: Piece['kind'], cut: number | null = null;
@@ -34,7 +35,8 @@ export function pieces(doc: Doc): Piece[] {
     const key = keyOf(c, w, h); void L; void S; void fabrics;
     const e = out.get(key);
     if (e) { e.qty++; return; }
-    const t = cut != null ? tpl(cut) : null;
+    const fin = kind === 'qst' ? (cut ?? 0) - 5 * s : (cut ?? 0) - 2 * s;
+    const t = cut != null ? tpl(cut, fin) : null;
     // looks square but isn't: the easiest mistake to miss
     const nearSquare = !sq && L / S < 1.25 && kind !== 'goose';
     const status: Status = t != null ? 'template' : nearSquare ? 'near' : (kind === 'rect' || kind === 'goose') && onQuarter(L + 2 * s) && onQuarter(S + 2 * s) ? 'ruler' : 'odd';
@@ -58,7 +60,8 @@ export function pieces(doc: Doc): Piece[] {
 }
 
 /** the finished size a piece must be so that a template cuts it */
-export function finishedFor(p: Piece, template: number, seam: number) {
+export function finishedFor(p: Piece, template: number, seam: number, finishedSize = false) {
+  if (finishedSize) return template;
   return p.kind === 'qst' ? template - 5 * seam : template - 2 * seam;
 }
 

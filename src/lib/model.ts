@@ -36,10 +36,12 @@ export interface Settings {
   hst: 'trim' | 'exact';
   /** square templates the quilter owns: CUT sizes (seam allowance included) */
   templates: number[];
+  /** templates that are FINISHED size (no seam allowance), e.g. a hard plastic 1″ */
+  finishedTemplates: number[];
 }
 export const DEFAULT_SETTINGS: Settings = {
   seam: 0.25, wof: 42, binding: 'binding', bindingWidth: 0.375, seams: true,
-  anchor: null, hst: 'trim', templates: [1, 2, 3, 4, 6, 9],
+  anchor: null, hst: 'trim', templates: [1, 2, 3, 4, 6, 9], finishedTemplates: [1],
 };
 export interface Doc {
   v: 3; root: string; fabrics: Fabric[]; blocks: Record<string, Block>; settings: Settings;
@@ -335,7 +337,7 @@ export function defaultDoc(): Doc {
       { id: 'binding', name: 'Checker binding', color: '#3a3a3a', tile: 2 },
     ],
     blocks: Object.fromEntries(blocks.map(b => [b.id, b])),
-    settings: { ...DEFAULT_SETTINGS, templates: [...DEFAULT_SETTINGS.templates], anchor: { def: 'nine', i: 0, size: 1.5 } },
+    settings: { ...DEFAULT_SETTINGS, templates: [...DEFAULT_SETTINGS.templates], finishedTemplates: [...DEFAULT_SETTINGS.finishedTemplates], anchor: { def: 'nine', i: 0, size: 1.5 } },
   };
 }
 
