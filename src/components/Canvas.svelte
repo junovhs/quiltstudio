@@ -1,5 +1,6 @@
 <script lang="ts">
   import { scale } from 'svelte/transition';
+  import { untrack } from 'svelte';
   import { backOut } from 'svelte/easing';
   import { Scan } from '@lucide/svelte';
   import Node from './Node.svelte';
@@ -56,7 +57,12 @@
     const k = s / z.s;
     z = s === 1 ? { s: 1, x: 0, y: 0 } : { s, x: px - (px - z.x) * k, y: py - (py - z.y) * k };
   }
-  function fit() { settling = true; z = { s: 1, x: 0, y: 0 }; setTimeout(() => (settling = false), 400); }
+  /* the zoom only re-fits when YOU ask (or open another block) — never because an edit changed the
+     quilt's size, otherwise a locked 20″ block would look like it grew when the quilt around it shrank */
+  let fitW = $state(untrack(() => W)), fitH = $state(untrack(() => H));
+  const refit = () => { fitW = W; fitH = H; };
+  const offFit = $derived(Math.abs(fitW - W) > 1e-6 || Math.abs(fitH - H) > 1e-6);
+  function fit() { settling = true; z = { s: 1, x: 0, y: 0 }; refit(); setTimeout(() => (settling = false), 400); }
   const local = (e: { clientX: number; clientY: number }) => { const r = stage.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
 
   function wheel(e: WheelEvent) {
@@ -174,13 +180,13 @@
   }
 
   // a new block or quilt starts zoomed out
-  $effect(() => { scopeId(); z = { s: 1, x: 0, y: 0 }; });
+  $effect(() => { scopeId(); untrack(() => { z = { s: 1, x: 0, y: 0 }; refit(); }); });
 </script>
 
 <div class="stage" bind:this={stage} class:shake={flash === 'no'} class:seams={app.doc.settings.seams} data-tool={app.tool}
   onpointerdown={down} onpointermove={move} onpointerup={up} onpointercancel={up} onwheel={wheel} role="application">
   <div class="zoom" class:settling style:transform="translate({z.x}px, {z.y}px) scale({z.s})">
-    <div class="frame" style:--cw={W} style:--ch={H} style:--bw={bw}>
+    <div class="frame" style:--cw={W} style:--ch={H} style:--fw={fitW} style:--fh={fitH} style:--bw={bw}>
       <Ruler block={b} axis="col" />
       <Ruler block={b} axis="row" />
       <div class="quilt">
@@ -189,7 +195,7 @@
       </div>
     </div>
   </div>
-  {#if z.s > 1.01}
+  {#if z.s > 1.01 || offFit}
     <button class="fit" title="Fit" onpointerdown={e => e.stopPropagation()} onclick={fit} transition:scale={{ start: 0.5, duration: 350, easing: backOut }}><Scan size={20} /></button>
   {/if}
 </div>
@@ -209,14 +215,14 @@
   .zoom { position: absolute; inset: 0; display: grid; place-items: center; transform-origin: 0 0; will-change: transform;
     &.settling { transition: transform .35s var(--ease); } }
   .frame {
-    --ppi: min((100cqw - 120px) / (var(--cw) + 2 * var(--bw)), (100cqh - 110px) / (var(--ch) + 2 * var(--bw)));
+    --ppi: min((100cqw - 120px) / (var(--fw) + 2 * var(--bw)), (100cqh - 110px) / (var(--fh) + 2 * var(--bw)));
     display: grid; grid-template-areas: ". top" "left q";
     grid-template-columns: 30px calc(var(--ppi) * var(--cw));
     grid-template-rows: 26px calc(var(--ppi) * var(--ch));
     gap: calc(var(--bw) * var(--ppi) + 8px);
     view-transition-name: canvas;
     @media (width < 760px), (height < 500px) {
-      --ppi: min((100cqw - 48px) / (var(--cw) + 2 * var(--bw)), (100cqh - 56px) / (var(--ch) + 2 * var(--bw)));
+      --ppi: min((100cqw - 48px) / (var(--fw) + 2 * var(--bw)), (100cqh - 56px) / (var(--fh) + 2 * var(--bw)));
       grid-template-columns: 20px calc(var(--ppi) * var(--cw));
       grid-template-rows: 20px calc(var(--ppi) * var(--ch));
       gap: calc(var(--bw) * var(--ppi) + 4px);

@@ -3,7 +3,8 @@
   import { backOut } from 'svelte/easing';
   import { RotateCw, FlipHorizontal2, FlipVertical2, Combine, Group, Grid2x2, Trash2, Maximize2, X, Printer, Scissors, Lock, LockOpen } from '@lucide/svelte';
   import Tile from './Tile.svelte';
-  import { app, edit, enter, scope, scopeId, ui } from '../lib/store.svelte';
+  import { app, edit, enter, scope, scopeId, ui, rollback } from '../lib/store.svelte';
+  import { pieces, whereIs, resizePiece } from '../lib/sizes';
   import { cellSize, fmt } from '../lib/calc';
   import { fabricsOf, groupToBlock, makeKind, merge, mergeSame, snap, splitCell, xform, cellIndexAt, type Kind, type Xf } from '../lib/model';
 
@@ -36,6 +37,19 @@
   function doGroup() { edit(() => { if (groupToBlock(app.doc, b, sel, 'Block')) app.sel = [b.cells.length - 1]; }); }
   function doSplit(n: number, m: number) { splitting = false; if (first) edit(() => splitCell(app.doc, b, sel[0], n, m, 'Block')); }
   const clear = () => each(i => { b.cells[i].c = { k: 'empty' }; });
+  let refused = $state(false);
+  /** "I cut it at 5″": finished = cut − seams; every identical piece changes, locks still win */
+  function iCut(text: string) {
+    const cut = parseFloat(text.replace(',', '.').replace('½', '.5').replace('¼', '.25').replace('¾', '.75'));
+    const fin = cut - 2 * app.doc.settings.seam;
+    if (!(fin > 0)) return;
+    const here = scopeId(), i = sel[0];
+    const p = pieces(app.doc).find(p => (whereIs(app.doc, p).get(here) ?? []).includes(i));
+    if (!p) return;
+    let ok = true;
+    edit(() => { ok = resizePiece(app.doc, p, fin, fin); });
+    if (!ok) { rollback(); refused = true; setTimeout(() => (refused = false), 500); }
+  }
 </script>
 
 {#if first}
@@ -58,7 +72,13 @@
         <!-- finished size in inches, cut size underneath -->
         <span class="size" title="Finished size · cut size">
           <b>{fmt(sz.w, '')} × {fmt(sz.h)}</b>
-          {#if first.c.k === 'solid'}<small><Scissors size={11} /> {fmt(sz.w + 2 * seam, '')} × {fmt(sz.h + 2 * seam)}</small>{/if}
+          {#if (first.c.k === 'solid' || first.c.k === 'hst') && Math.abs(sz.w - sz.h) < 1 / 32}
+            <!-- type what you actually cut: every copy follows, everything else adjusts -->
+            <label class="cutin" class:no={refused} title="What did you cut? Type it — every copy follows">
+              <Scissors size={11} />
+              <input type="text" inputmode="decimal" value={fmt(sz.w + 2 * seam, '')} onchange={e => iCut(e.currentTarget.value)} onfocus={e => e.currentTarget.select()} />″
+            </label>
+          {:else if first.c.k === 'solid'}<small><Scissors size={11} /> {fmt(sz.w + 2 * seam, '')} × {fmt(sz.h + 2 * seam)}</small>{/if}
         </span>
         <span class="sep"></span>
       {/if}
@@ -106,6 +126,11 @@
     }
   }
   .grp { display: flex; gap: 2px; }
+  .cutin { display: flex; align-items: center; gap: 3px; font-size: 12px; color: var(--muted); font-weight: 700; padding: 1px 4px; border-radius: 6px; cursor: text;
+    &:hover, &:focus-within { background: var(--sunk); color: var(--ink); }
+    input { width: 3.2em; field-sizing: fixed; border: 0; background: none; font: inherit; color: inherit; padding: 0; text-align: right; }
+    &.no { animation: shake .4s var(--ease); color: oklch(60% 0.2 25); } }
+  @keyframes shake { 20%, 60% { translate: -5px; } 40%, 80% { translate: 5px; } }
   .size { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 8px; line-height: 1.15; white-space: nowrap; flex: none;
     b { font-size: 15px; font-weight: 800; letter-spacing: -.01em; }
     small { display: flex; align-items: center; gap: 3px; font-size: 11px; color: var(--muted); font-weight: 600; } }
