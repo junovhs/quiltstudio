@@ -126,7 +126,9 @@ export function resizeCells(doc: Doc, where: Map<string, number[]>, target: (cw:
     if (id === doc.root) { const outer = free.filter(i => i === 0 || i === t.length - 1); if (outer.length) free = outer; }
     const room = free.reduce((s, i) => s + t[i] * kk, 0);
     // the other tracks give back what the resized ones took (block keeps its size)
-    if (!free.length || room - delta < free.length * 0.25 - 1e-9) return false;
+    // (the quilt's border never gets thinner than 1″)
+    const min = id === doc.root ? 1 : 0.25;
+    if (!free.length || free.some(i => t[i] * kk - delta * (t[i] * kk) / room < min - 1e-9)) return false;
     for (const i of free) t[i] = (t[i] * kk - delta * (t[i] * kk) / room) / kk;
     return true;
   }

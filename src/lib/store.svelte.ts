@@ -244,8 +244,9 @@ export function tryChange(fn: (contain: number) => boolean, allow: string[] = []
   let lastBroken: { def: string; i: number }[] = [];
   // first the natural way (blocks grow/shrink and pass it on); if that would spoil a square,
   // try keeping the change inside the block itself (its other parts make room)
-  // the natural way first, then keep it in the nearest block that can absorb it
-  for (const contain of [Infinity, 1, 0, 2, 3]) {
+  // change the design as little as possible: let the nearest block absorb it first,
+  // and only let sizes travel further out (up to the whole quilt) if that doesn't work
+  for (const contain of [0, 1, 2, 3, Infinity]) {
     let ok = true;
     edit(() => { ok = fn(contain); });
     if (!ok) { rollback(); continue; }
