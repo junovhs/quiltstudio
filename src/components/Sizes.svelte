@@ -1,9 +1,9 @@
 <script lang="ts">
   import { slide, fly } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
-  import { Search, Plus, X, SlidersHorizontal } from '@lucide/svelte';
+  import { Search, Plus, X, SlidersHorizontal, Square } from '@lucide/svelte';
   import Tile from './Tile.svelte';
-  import { app, edit, ui, rollback } from '../lib/store.svelte';
+  import { app, edit, ui, rollback, tryChange } from '../lib/store.svelte';
   import { fmt } from '../lib/calc';
   import { pieces, whereIs, resizePiece, finishedFor, templateSeam, type Piece } from '../lib/sizes';
 
@@ -35,9 +35,8 @@
   function use(p: Piece, t: number) {
     const v = finishedFor(app.doc, t);
     if (v <= 0) return;
-    let ok = true;
-    edit(() => { ok = resizePiece(app.doc, p, v, v); });
-    if (!ok) { rollback(); no = p.key; setTimeout(() => (no = ''), 500); } else ui.glow = [];
+    const ok = tryChange(() => resizePiece(app.doc, p, v, v));
+    if (!ok) { no = p.key; setTimeout(() => (no = ''), 500); }
   }
 
   function addT() { const v = parseFloat(newT.replace(',', '.')); newT = ''; if (v > 0 && !T.includes(v)) edit(() => { app.doc.settings.templates.push(v); app.doc.settings.templateSeams = { ...app.doc.settings.templateSeams, [v]: 0 }; }); }
@@ -56,6 +55,7 @@
             <span class="pic" style:aspect-ratio="{p.w} / {p.h}"><Tile c={p.c} /></span>
             <span class="count">{p.qty}</span>
             <span class="sp"></span>
+            {#if p.status === 'near'}<span class="nsq" title="Not quite square"><i></i></span>{/if}
             <!-- green = fits that guide; orange outline = closest guide -->
             <span class="guide" class:ok title={ok ? 'Fits your ' + name(g) + ' guide' : 'Closest guide: ' + name(g)}>{name(g)}</span>
           </button>
@@ -75,9 +75,11 @@
 
     <!-- my guides: tucked away -->
     <div class="foot">
-      <div class="mine">
-        {#each T as t}<span class="chipg"><span class="sq" style:--s={t / maxT}></span>{name(t)}</span>{/each}
-      </div>
+      <button class="keep" class:on={app.doc.settings.keepSquares !== false} title="Keep perfect squares perfect (changes that would spoil one are refused)"
+        onclick={() => edit(() => (app.doc.settings.keepSquares = app.doc.settings.keepSquares === false))}>
+        <Square size={16} strokeWidth={2.5} /><span>{app.doc.settings.keepSquares !== false ? 'keep squares' : 'squares free'}</span>
+      </button>
+      <span class="sp"></span>
       <button class="icon" class:on={setup} title="My guides" onclick={() => (setup = !setup)}><SlidersHorizontal size={17} /></button>
       <button class="icon" title="Close" onclick={() => { ui.sizes = false; ui.glow = []; }}><X size={17} /></button>
     </div>
@@ -121,6 +123,9 @@
     b { font-size: 18px; font-weight: 800; line-height: 1; }
     &.cur { background: oklch(60% 0.15 150); color: white; .sq { background: white; } } }
   .sq { display: block; width: calc(10px + var(--s) * 24px); aspect-ratio: 1; border-radius: 3px; background: currentColor; opacity: .7; }
+  .nsq { display: grid; place-items: center; width: 26px; height: 26px; i { width: 18px; height: 14px; border: 2.5px dashed oklch(62% 0.16 55); border-radius: 2px; } }
+  .keep { display: flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px; border-radius: 10px; border: 2px dashed var(--line); background: none; color: var(--muted); font-weight: 700; font-size: 12px; white-space: nowrap;
+    &.on { border: 2px solid oklch(60% 0.15 150); color: oklch(60% 0.15 150); } }
   .foot { display: flex; align-items: center; gap: 4px; padding: 8px 8px calc(8px + env(safe-area-inset-bottom)) 12px; border-top: 1px solid var(--line); }
   .mine { flex: 1; display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; color: var(--muted); }
   .chipg { display: flex; flex-direction: column; align-items: center; gap: 2px; font-weight: 800; font-size: 12px; .sq { width: calc(6px + var(--s) * 14px); } }

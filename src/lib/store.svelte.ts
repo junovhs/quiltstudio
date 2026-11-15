@@ -230,3 +230,27 @@ export const ui = $state({ make: false, projects: false, palette: false, sizes: 
 export function toggleDone(key: string) {
   edit(() => { const p = (app.doc.progress ??= {}); if (p[key]) delete p[key]; else p[key] = true; });
 }
+
+/**
+ * Make a size change safely: locks are enforced by the change itself (returns false = refused);
+ * with "keep squares" on, a change that would spoil a perfect square elsewhere is refused too,
+ * and those squares light up for a moment. `allow` = "block:cell" keys you're deliberately changing.
+ */
+import { squareSet, brokenSquares } from './sizes';
+export function tryChange(fn: () => boolean, allow: string[] = []): boolean {
+  const before = app.doc.settings.keepSquares !== false ? squareSet(app.doc) : null;
+  allow.forEach(k => before?.delete(k));
+  let ok = true;
+  edit(() => { ok = fn(); });
+  if (!ok) { rollback(); return false; }
+  if (before) {
+    const broken = brokenSquares(before, app.doc);
+    if (broken.length) {
+      rollback();
+      ui.glow = broken;
+      setTimeout(() => { if (ui.glow === broken) ui.glow = []; }, 2600);
+      return false;
+    }
+  }
+  return true;
+}

@@ -40,6 +40,12 @@ export interface Settings {
   finishedTemplates: number[];
   /** each template's own built-in seam allowance: 0 = finished size (e.g. hard plastic 1″), ¼ (e.g. the 2″) … */
   templateSeams: Record<string, number>;
+  /** keep the whole quilt's size: corrections are absorbed by the outer border */
+  lockQuilt?: boolean;
+  /** never let a perfect square become a not-quite-square */
+  keepSquares?: boolean;
+  /** binding strip width (for yardage), and how much shows on the front */
+  bindingStrip?: number;
   /** bumps when we learn about templates the quilter owns */
   tplVersion?: number;
 }
@@ -47,7 +53,7 @@ export const DEFAULT_SETTINGS: Settings = {
   seam: 0.25, wof: 42, binding: 'binding', bindingWidth: 0.375, seams: true,
   anchor: null, hst: 'trim', templates: [1, 2, 3, 4, 5, 6, 9], finishedTemplates: [1, 5],
   templateSeams: { 1: 0, 2: 0.25, 3: 0.25, 4: 0.25, 5: 0, 6: 0.25, 9: 0.25 },
-  tplVersion: 3,
+  tplVersion: 3, lockQuilt: true, keepSquares: true, bindingStrip: 2,
 };
 export interface Doc {
   v: 3; root: string; fabrics: Fabric[]; blocks: Record<string, Block>; settings: Settings;
@@ -436,8 +442,8 @@ export function holdsLock(doc: Doc, id: string, seen = new Set<string>()): boole
 }
 /** rows/columns of `b` that may not change size: they hold a locked block (or b itself is locked) */
 export function frozenTracks(doc: Doc, b: Block, axis: 'col' | 'row'): boolean[] {
+  // (a locked block's OUTSIDE size is fixed; inside, its rows/cols can still trade with each other)
   const n = axis === 'col' ? b.cols.length : b.rows.length;
-  if (b.locked) return Array(n).fill(true);
   const out = Array<boolean>(n).fill(false);
   for (const c of b.cells) {
     if (c.c.k !== 'inst' || !holdsLock(doc, c.c.ref)) continue;

@@ -3,8 +3,8 @@
   import { backOut } from 'svelte/easing';
   import { RotateCw, FlipHorizontal2, FlipVertical2, Combine, Group, Grid2x2, Trash2, Maximize2, X, Printer, Scissors, Lock, LockOpen } from '@lucide/svelte';
   import Tile from './Tile.svelte';
-  import { app, edit, enter, scope, scopeId, ui, rollback } from '../lib/store.svelte';
-  import { pieces, whereIs, resizePiece } from '../lib/sizes';
+  import { app, edit, enter, scope, scopeId, ui, rollback, tryChange } from '../lib/store.svelte';
+  import { pieces, whereIs, resizePiece, resizeCells, parseSize } from '../lib/sizes';
   import { cellSize, fmt } from '../lib/calc';
   import { fabricsOf, groupToBlock, makeKind, merge, mergeSame, snap, splitCell, xform, cellIndexAt, type Kind, type Xf } from '../lib/model';
 
@@ -38,6 +38,14 @@
   function doSplit(n: number, m: number) { splitting = false; if (first) edit(() => splitCell(app.doc, b, sel[0], n, m, 'Block')); }
   const clear = () => each(i => { b.cells[i].c = { k: 'empty' }; });
   let refused = $state(false);
+  function setSize(input: HTMLInputElement, cur: { w: number; h: number }) {
+    const v = parseSize(input.value);
+    input.value = `${fmt(cur.w, '')} × ${fmt(cur.h)}`;
+    if (!v) return;
+    const here = scopeId(), cells = [...sel];
+    const ok = tryChange(() => resizeCells(app.doc, new Map([[here, cells]]), () => v), cells.map(i => `${here}:${i}`));
+    if (!ok) { refused = true; setTimeout(() => (refused = false), 500); }
+  }
   /** "I cut it at 5″": finished = cut − seams; every identical piece changes, locks still win */
   function iCut(text: string) {
     const cut = parseFloat(text.replace(',', '.').replace('½', '.5').replace('¼', '.25').replace('¾', '.75'));
@@ -70,16 +78,11 @@
     {:else}
       {#if sz}
         <!-- finished size in inches, cut size underneath -->
-        <span class="size" title="Finished size · cut size">
-          <b>{fmt(sz.w, '')} × {fmt(sz.h)}</b>
-          {#if (first.c.k === 'solid' || first.c.k === 'hst') && Math.abs(sz.w - sz.h) < 1 / 32}
-            <!-- type what you actually cut: every copy follows, everything else adjusts -->
-            <label class="cutin" class:no={refused} title="What did you cut? Type it — every copy follows">
-              <Scissors size={11} />
-              <input type="text" inputmode="decimal" value={fmt(sz.w + 2 * seam, '')} onchange={e => iCut(e.currentTarget.value)} onfocus={e => e.currentTarget.select()} />″
-            </label>
-          {:else if first.c.k === 'solid'}<small><Scissors size={11} /> {fmt(sz.w + 2 * seam, '')} × {fmt(sz.h + 2 * seam)}</small>{/if}
-        </span>
+        <!-- the finished size: tap it and type what it should be ("9" = 9×9, or "9 x 8") -->
+        <label class="size" class:no={refused} title="Type the size it should be">
+          <input type="text" value={`${fmt(sz.w, '')} × ${fmt(sz.h)}`} onfocus={e => e.currentTarget.select()}
+            onkeydown={e => e.key === 'Enter' && e.currentTarget.blur()} onchange={e => setSize(e.currentTarget, sz)} />
+        </label>
         <span class="sep"></span>
       {/if}
       {#if first.c.k === 'inst' && sel.length === 1}
@@ -131,7 +134,10 @@
     input { width: 3.2em; field-sizing: fixed; border: 0; background: none; font: inherit; color: inherit; padding: 0; text-align: right; }
     &.no { animation: shake .4s var(--ease); color: oklch(60% 0.2 25); } }
   @keyframes shake { 20%, 60% { translate: -5px; } 40%, 80% { translate: 5px; } }
-  .size { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 8px; line-height: 1.15; white-space: nowrap; flex: none;
+  .size { display: flex; align-items: center; padding: 0 4px; flex: none; cursor: text;
+    input { width: 7.2em; field-sizing: fixed; border: 2px solid transparent; border-radius: 9px; background: var(--sunk); font: inherit; font-size: 15px; font-weight: 800; text-align: center; padding: 5px 6px; color: inherit; }
+    input:hover { border-color: var(--line); } input:focus { border-color: var(--accent); outline: none; background: var(--panel); }
+    &.no input { animation: shake .4s var(--ease); border-color: oklch(60% 0.2 25); }
     b { font-size: 15px; font-weight: 800; letter-spacing: -.01em; }
     small { display: flex; align-items: center; gap: 3px; font-size: 11px; color: var(--muted); font-weight: 600; } }
   .sep { width: 1px; height: 22px; background: var(--line); margin: 0 4px; }

@@ -103,16 +103,25 @@ function keyOf(c: Content, w: number, h: number) {
  * other (unlocked) rows/columns instead. If there's no room, nothing changes (returns false).
  */
 export function resizePiece(doc: Doc, p: Piece, size: number, shortTo = size): boolean {
-  const where = whereIs(doc, p);
+  return resizeCells(doc, whereIs(doc, p), (cw, ch) => (cw >= ch - 1e-6 ? [size, shortTo] : [shortTo, size]));
+}
+
+/**
+ * Resize specific cells (block id → cell indexes) to `target(currentW, currentH)` (finished inches).
+ * Same rules as above: locks win, the quilt keeps its size when that's locked (the outer border
+ * gives), blocks soak up changes they can't pass on.
+ */
+export function resizeCells(doc: Doc, where: Map<string, number[]>, target: (cw: number, ch: number) => [number, number]): boolean {
   const scales = new Map(Object.keys(doc.blocks).map(id => [id, id === doc.root ? { sx: 1, sy: 1 } : (scaleOf(doc, id) ?? { sx: 1, sy: 1 })]));
-  const lockedIds = Object.values(doc.blocks).filter(b => b.locked).map(b => b.id);
   const k = (id: string, axis: 'col' | 'row') => (axis === 'col' ? scales.get(id)!.sx : scales.get(id)!.sy);
   const tr = (id: string, axis: 'col' | 'row') => (axis === 'col' ? doc.blocks[id].cols : doc.blocks[id].rows);
 
   // soak a change up inside block `id` using its free tracks (not `keep`, not frozen)
   function absorb(id: string, axis: 'col' | 'row', delta: number, keep: Set<number>): boolean {
     const t = tr(id, axis), f = frozenTracks(doc, doc.blocks[id], axis), kk = k(id, axis);
-    const free = t.map((_, i) => i).filter(i => !keep.has(i) && !f[i]);
+    let free = t.map((_, i) => i).filter(i => !keep.has(i) && !f[i]);
+    // the quilt itself: let the outer border give first
+    if (id === doc.root) { const outer = free.filter(i => i === 0 || i === t.length - 1); if (outer.length) free = outer; }
     const room = free.reduce((s, i) => s + t[i] * kk, 0);
     // the other tracks give back what the resized ones took (block keeps its size)
     if (!free.length || room - delta < free.length * 0.25 - 1e-9) return false;
@@ -122,7 +131,10 @@ export function resizePiece(doc: Doc, p: Piece, size: number, shortTo = size): b
 
   // block `id` changed by `delta` real inches along `axis`: make its slots follow, or soak it up
   function settle(id: string, axis: 'col' | 'row', delta: number, keep: Set<number>, depth = 0): boolean {
-    if (Math.abs(delta) < 1e-9 || id === doc.root) return true;
+    if (Math.abs(delta) < 1e-9) return true;
+    if (id === doc.root) return doc.settings.lockQuilt ? absorb(id, axis, delta, keep) : true;
+    // a locked block never changes its outside size: make room inside it instead
+    if (doc.blocks[id]?.locked) return absorb(id, axis, delta, keep);
     if (depth > 12) return false;
     const holders: { pb: Block; cell: Cell; paxis: 'col' | 'row' }[] = [];
     for (const pb of Object.values(doc.blocks))
@@ -152,17 +164,14 @@ export function resizePiece(doc: Doc, p: Piece, size: number, shortTo = size): b
   }
 
   for (const [id, idxs] of where) {
-    // pieces inside a locked block can't change
-    if (lockedIds.some(l => l === id || uses(doc, l, id))) return false;
     const b = doc.blocks[id], sc = scales.get(id)!;
     const setC = new Map<number, number>(), setR = new Map<number, number>();
     for (const i of idxs) {
       const c = b.cells[i];
       const cw = sum(b.cols, c.x, c.cs) * sc.sx, ch = sum(b.rows, c.y, c.rs) * sc.sy;
-      const wIsLong = cw >= ch - 1e-6;
-      const tw = wIsLong ? size : shortTo, th = wIsLong ? shortTo : size;
-      if (c.cs === 1 && Math.abs(cw - tw) > 1e-6) setC.set(c.x, tw);
-      if (c.rs === 1 && Math.abs(ch - th) > 1e-6) setR.set(c.y, th);
+      const [tw, th] = target(cw, ch);
+      if (Math.abs(cw - tw) > 1e-6) for (let x = c.x; x < c.x + c.cs; x++) setC.set(x, b.cols[x] * sc.sx * tw / cw);
+      if (Math.abs(ch - th) > 1e-6) for (let y = c.y; y < c.y + c.rs; y++) setR.set(y, b.rows[y] * sc.sy * th / ch);
     }
     const fc = frozenTracks(doc, b, 'col'), fr = frozenTracks(doc, b, 'row');
     if ([...setC.keys()].some(x => fc[x]) || [...setR.keys()].some(y => fr[y])) return false;
@@ -179,4 +188,46 @@ export function resizePiece(doc: Doc, p: Piece, size: number, shortTo = size): b
     if (cs) a.size = Math.min(cs.w, cs.h);
   }
   return true;
+}
+
+/* ---------------- keep perfect squares perfect ---------------- */
+/** every piece / block slot that is a perfect square right now, keyed "block:cell" */
+export function squareSet(doc: Doc): Set<string> {
+  const out = new Set<string>();
+  function walk(id: string, w: number, h: number, depth: number) {
+    const b = doc.blocks[id];
+    if (!b || depth > 12) return;
+    const sx = w / sum(b.cols), sy = h / sum(b.rows);
+    b.cells.forEach((cell, i) => {
+      const cw = sum(b.cols, cell.x, cell.cs) * sx, ch = sum(b.rows, cell.y, cell.rs) * sy;
+      if (cell.c.k !== 'empty' && Math.abs(cw - ch) < 1 / 64) out.add(`${id}:${i}`);
+      if (cell.c.k === 'inst') { const [iw, ih] = cell.c.rot % 2 ? [ch, cw] : [cw, ch]; walk(cell.c.ref, iw, ih, depth + 1); }
+    });
+  }
+  const r = doc.blocks[doc.root];
+  walk(doc.root, sum(r.cols), sum(r.rows), 0);
+  return out;
+}
+/** squares that stopped being square (as {def, i} so they can be lit up) */
+export function brokenSquares(before: Set<string>, doc: Doc) {
+  const now = squareSet(doc);
+  return [...before].filter(k => !now.has(k)).map(k => { const j = k.lastIndexOf(':'); return { def: k.slice(0, j), i: +k.slice(j + 1) }; });
+}
+
+/** "9", "9x9", "9 x 8", "4½", "4 1/2", "4.5" → [w, h] (one number = square) */
+export function parseSize(text: string): [number, number] | null {
+  const num = (t: string) => {
+    t = t.trim().replace(',', '.').replace(/[″"]/g, '');
+    const fr: Record<string, number> = { '¼': .25, '½': .5, '¾': .75, '⅛': .125, '⅜': .375, '⅝': .625, '⅞': .875 };
+    let v = 0;
+    for (const [c, f] of Object.entries(fr)) if (t.includes(c)) { v += f; t = t.replace(c, ''); }
+    const m = t.match(/^(\d+(?:\.\d+)?)?\s*(?:(\d+)\/(\d+))?$/);
+    if (!m) return NaN;
+    if (m[1]) v += parseFloat(m[1]);
+    if (m[2]) v += +m[2] / +m[3];
+    return v || NaN;
+  };
+  const parts = text.toLowerCase().split(/x|×|by|\*/);
+  const a = num(parts[0]), b = parts.length > 1 ? num(parts[1]) : a;
+  return a > 0 && b > 0 ? [a, b] : null;
 }

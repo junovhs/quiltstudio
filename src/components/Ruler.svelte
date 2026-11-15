@@ -16,7 +16,7 @@
   let el: HTMLDivElement;
 
   function setTrack(i: number, v: number) {
-    if (!(v > 0) || frozen[i]) return;
+    if (!(v > 0) || frozen[i] || block.locked) return;   // typing changes the total: not on a locked block
     edit(() => { tracks[i] = v / k; });
   }
 

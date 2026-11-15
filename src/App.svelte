@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { scale } from 'svelte/transition';
   import { backOut } from 'svelte/easing';
-  import { Undo2, Redo2, Scissors, Settings, House, ChevronRight, Grid3x3, Ban, FolderOpen, Printer, Wand2, TriangleAlert } from '@lucide/svelte';
+  import { Undo2, Redo2, Scissors, Settings, House, ChevronRight, Grid3x3, Ban, FolderOpen, Printer, Wand2, TriangleAlert, Lock, LockOpen } from '@lucide/svelte';
   import Canvas from './components/Canvas.svelte';
   import Palette from './components/Palette.svelte';
   import Swatches from './components/Swatches.svelte';
@@ -29,6 +29,14 @@
   }).join('\n'));
 
   onMount(() => { loadImages(); });
+  const hereLocked = $derived(app.path.length ? !!app.doc.blocks[app.path.at(-1)!]?.locked : app.doc.settings.lockQuilt !== false);
+  function toggleHereLock() {
+    edit(() => {
+      const id = app.path.at(-1);
+      if (id) app.doc.blocks[id].locked = !app.doc.blocks[id].locked;
+      else app.doc.settings.lockQuilt = app.doc.settings.lockQuilt === false;
+    });
+  }
   const oddCount = $derived(pieces(app.doc).filter(p => p.status === 'odd' || p.status === 'near').length);
   // finished size of whatever we're looking at: the quilt, or the block we've opened
   const here = $derived.by(() => {
@@ -86,7 +94,11 @@
         </button>
       {/each}
     </nav>
-    <span class="where" title="Finished size">{fmt(here.w, '')} × {fmt(here.h)}</span>
+    <!-- the size of what you're looking at; tap the padlock to lock it (quilt: corrections come out of the border) -->
+    <button class="where" class:locked={hereLocked} title={hereLocked ? 'Size locked — tap to let it change' : 'Tap to lock this size'} onclick={toggleHereLock}>
+      {fmt(here.w, '')} × {fmt(here.h)}
+      {#if hereLocked}<Lock size={14} strokeWidth={2.6} />{:else}<LockOpen size={14} strokeWidth={2.2} />{/if}
+    </button>
     <div class="spacer"></div>
     <button class="icon" disabled={!app.canUndo} onclick={undo} title="Undo"><Undo2 size={19} /></button>
     <button class="icon" disabled={!app.canRedo} onclick={redo} title="Redo"><Redo2 size={19} /></button>
@@ -121,15 +133,18 @@
 
 <div popover id="settings">
   <div class="settings">
-    <label title="Seam allowance"><span class="glyph seam"></span><input type="text" inputmode="decimal" value={fmt(app.doc.settings.seam, '')} onchange={e => edit(() => (app.doc.settings.seam = parseFloat(e.currentTarget.value) || 0.25))} />″</label>
-    <label title="Usable fabric width"><span class="glyph wof"></span><input type="text" inputmode="decimal" value={app.doc.settings.wof} onchange={e => edit(() => (app.doc.settings.wof = parseFloat(e.currentTarget.value) || 42))} />″</label>
-    <div class="bind" title="Binding">
-      <span class="glyph bindg"></span>
+    <label title="Seam allowance"><span class="glyph seam"></span><span class="lbl">seam</span><input type="text" inputmode="decimal" value={fmt(app.doc.settings.seam, '')} onchange={e => edit(() => (app.doc.settings.seam = parseFloat(e.currentTarget.value) || 0.25))} />″</label>
+    <label title="Usable fabric width"><span class="glyph wof"></span><span class="lbl">fabric width</span><input type="text" inputmode="decimal" value={app.doc.settings.wof} onchange={e => edit(() => (app.doc.settings.wof = parseFloat(e.currentTarget.value) || 42))} />″</label>
+    <label title="Binding strip width (what you bought)"><span class="glyph bindg"></span><span class="lbl">binding strip</span><input type="text" inputmode="decimal" value={fmt(app.doc.settings.bindingStrip ?? 2, '')} onchange={e => edit(() => (app.doc.settings.bindingStrip = parseFloat(e.currentTarget.value) || 2))} />″</label>
+    <label title="How much binding shows on the front"><span class="glyph bindg"></span><span class="lbl">shows on front</span><input type="text" inputmode="decimal" value={fmt(app.doc.settings.bindingWidth, '')} onchange={e => edit(() => (app.doc.settings.bindingWidth = parseFloat(e.currentTarget.value.replace('½', '.5').replace('¼', '.25').replace('⅜', '.375')) || 0.375))} />″</label>
+    <div class="bind" title="Binding fabric (drawn around the quilt)">
+      <span class="lbl">binding fabric</span>
       <button class="bsw none" class:on={!app.doc.settings.binding} onclick={() => edit(() => (app.doc.settings.binding = null))}><Ban size={14} /></button>
       {#each app.doc.fabrics as f}
         <button class="bsw f-{f.id}" class:on={app.doc.settings.binding === f.id} title={f.name} onclick={() => edit(() => (app.doc.settings.binding = f.id))}></button>
       {/each}
     </div>
+    <span class="lbl">triangles: cut</span>
     <div class="hst" title="Half-square triangles">
       <button class:on={app.doc.settings.hst === 'trim'} title="Cut big, trim down" onclick={() => edit(() => (app.doc.settings.hst = 'trim'))}><Scissors size={14} /> +1″</button>
       <button class:on={app.doc.settings.hst === 'exact'} title="Cut exact" onclick={() => edit(() => (app.doc.settings.hst = 'exact'))}>+⅞″</button>
@@ -180,7 +195,9 @@
   .crumb { width: 38px; height: 38px; padding: 5px; border: 0; background: transparent; border-radius: 10px; display: grid; place-items: center; color: var(--muted);
     &:hover { background: var(--sunk); } &.here { background: var(--accent-soft); color: var(--accent); } }
   .spacer { flex: 1; }
-  .where { margin-left: 12px; padding: 4px 10px; border-radius: 99px; background: var(--sunk); font-weight: 800; font-size: 14px; white-space: nowrap; letter-spacing: -.01em; }
+  .where { display: flex; align-items: center; gap: 6px; margin-left: 12px; padding: 4px 10px; border: 0; border-radius: 99px; background: var(--sunk); font-weight: 800; font-size: 14px; white-space: nowrap; letter-spacing: -.01em; color: var(--ink);
+    :global(svg) { opacity: .45; } &.locked { background: var(--ink); color: var(--panel); :global(svg) { opacity: 1; } } }
+  .lbl { flex: 1; font-size: 12.5px; font-weight: 700; color: var(--muted); }
   .make { display: flex; align-items: center; gap: 10px; margin-left: 10px; padding: 7px 12px 7px 14px; border: 0; border-radius: 99px; background: var(--accent); color: white; font-weight: 600;
     box-shadow: 0 4px 14px oklch(from var(--accent) l c h / 35%); &:hover { scale: 1.04; } }
   .dots { display: flex; i { width: 16px; height: 16px; border-radius: 50%; margin-left: -5px; box-shadow: 0 0 0 2px var(--accent); } }
