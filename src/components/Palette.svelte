@@ -2,12 +2,13 @@
   import { flip } from 'svelte/animate';
   import { scale } from 'svelte/transition';
   import { backOut } from 'svelte/easing';
-  import { MousePointer2, Paintbrush, PaintBucket, Ruler, Square, Columns2, Rows2, Grid2x2, RefreshCw, RotateCw, FlipHorizontal2, FlipVertical2, Plus, Pencil } from '@lucide/svelte';
+  import { MousePointer2, Paintbrush, PaintBucket, Ruler, Square, Columns2, Rows2, Grid2x2, RefreshCw, RotateCw, FlipHorizontal2, FlipVertical2, Plus, Pencil, Lock } from '@lucide/svelte';
   import Tile from './Tile.svelte';
   import Thumb from './Thumb.svelte';
   import { app, edit, openBlock, scopeId, useCount, ui, type Tool } from '../lib/store.svelte';
   import { taps } from '../lib/gestures';
   import { swipeClose } from '../lib/sheet';
+  import { pickUp, placeInSelection } from '../lib/drag.svelte';
   import { fabricsOf, makeKind, setRegion, snap, uid, xform, type Content, type Kind, type Sym, type Xf } from '../lib/model';
   import { openPicker } from '../lib/picker.svelte';
 
@@ -29,7 +30,12 @@
     if (c.k === 'hst' && app.brush.k === 'hst') c.corner = app.brush.corner;
     app.brush = c; app.tool = 'paint'; ui.palette = false;
   }
-  const useBlock = (id: string) => { app.brush = { k: 'inst', ref: id, rot: 0, flip: false }; app.tool = 'paint'; ui.palette = false; };
+  // tap a block: drop it into the selected slot(s); otherwise it just becomes the current block
+  const useBlock = (id: string) => {
+    const c = { k: 'inst' as const, ref: id, rot: 0 as const, flip: false };
+    if (!placeInSelection(c)) app.brush = c;
+  };
+  const inst = (id: string) => ({ k: 'inst' as const, ref: id, rot: 0 as const, flip: false });
   const brushX = (t: Xf) => (app.brush = xform(snap(app.brush), t));
   function pickRegion(e: MouseEvent) {
     const r = (e.target as HTMLElement).closest<HTMLElement>('[data-r]')?.dataset.r;
@@ -89,7 +95,8 @@
 
   <div class="shapes">
     {#each KINDS as k}
-      <button class="shape" class:on={app.tool === 'paint' && app.brush.k === k} title={k === 'solid' ? 'Square' : k === 'hst' ? 'Half-square triangle' : k === 'qst' ? 'Quarter-square triangle' : 'One-piece goose'} onclick={() => brushKind(k)}>
+      <button class="shape" class:on={app.tool === 'paint' && app.brush.k === k} title={k === 'solid' ? 'Square' : k === 'hst' ? 'Half-square triangle' : k === 'qst' ? 'Quarter-square triangle' : 'One-piece goose'}
+        draggable="false" onpointerdown={e => pickUp(e, shape(k))} onclick={() => brushKind(k)}>
         <Tile c={shape(k)} />
       </button>
     {/each}
@@ -100,10 +107,11 @@
       {@const n = useCount(blk.id)}
       <div class="card" animate:flip={{ duration: 350, easing: backOut }} in:scale={{ start: 0.6, duration: 400, easing: backOut }}
         class:on={app.tool === 'paint' && app.brush.k === 'inst' && app.brush.ref === blk.id} class:editing={scopeId() === blk.id}>
-        <button class="art" title="Paint with this block · double-click to open" onclick={() => useBlock(blk.id)} use:taps={{ double: () => { ui.palette = false; openBlock(blk.id); } }}>
+        <button class="art" title="Drag onto the quilt · double-click to open" draggable="false" onpointerdown={e => pickUp(e, inst(blk.id))} onclick={() => useBlock(blk.id)} use:taps={{ double: () => { ui.palette = false; openBlock(blk.id); } }}>
           <Thumb id={blk.id} />
         </button>
-        {#if n}<span class="badge count">{n}</span>{/if}
+        {#if n}{#key n}<span class="badge count" in:scale={{ start: 0.3, duration: 500, easing: backOut }}>{n}</span>{/key}{/if}
+        {#if blk.locked}<span class="lockb" title="Size locked"><Lock size={11} strokeWidth={3} /></span>{/if}
         <button class="open" title="Open" onclick={() => { ui.palette = false; openBlock(blk.id); }}><Pencil size={12} /></button>
       </div>
     {/each}
@@ -138,7 +146,8 @@
     &.on { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent); }
     &.editing { background: var(--accent-soft); }
   }
-  .art { width: 100%; height: 100%; padding: 0; border: 0; background: none; display: grid; place-items: center; }
+  .art { width: 100%; height: 100%; padding: 0; border: 0; background: none; display: grid; place-items: center; cursor: grab; touch-action: pan-y; -webkit-touch-callout: none; }
+  .shape { cursor: grab; touch-action: pan-y; -webkit-touch-callout: none; }
   .badge { position: absolute; right: -6px; bottom: -6px; min-width: 26px; padding: 1px 7px; border-radius: 99px; background: var(--ink); color: var(--panel); font-size: 13px; text-align: center; box-shadow: var(--shadow); }
   .open { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 7px; background: var(--panel); box-shadow: var(--shadow);
     opacity: 0; scale: .6; transition: opacity .2s, scale .35s var(--spring); }
@@ -189,5 +198,6 @@
       button { width: 100%; height: 32px; } button.on { background: var(--panel); color: var(--accent); box-shadow: var(--shadow); } }
     .brush { flex-wrap: wrap; } .turns { flex-direction: row; }
   }
+  .lockb { position: absolute; left: -5px; bottom: -6px; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--ink); color: var(--panel); box-shadow: var(--shadow); }
   .add { border: 2px dashed var(--line); background: transparent; color: var(--muted); &:hover { color: var(--accent); border-color: var(--accent); } }
 </style>

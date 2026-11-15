@@ -5,6 +5,7 @@
   import Node from './Node.svelte';
   import Tile from './Tile.svelte';
   import { app } from '../lib/store.svelte';
+  import { drag } from '../lib/drag.svelte';
 
   let { id, depth = 0, scope = false, sel = [] }: { id: string; depth?: number; scope?: boolean; sel?: number[] } = $props();
   const b = $derived(app.doc.blocks[id]);
@@ -16,7 +17,7 @@
     style:grid-template-columns={b.cols.map(v => v + 'fr').join(' ')}
     style:grid-template-rows={b.rows.map(v => v + 'fr').join(' ')}>
     {#each b.cells as cell, i}
-      <div class="cell" class:sel={scope && sel.includes(i)} class:ic={cell.c.k === 'inst'}
+      <div class="cell" class:sel={scope && sel.includes(i)} class:lifted={scope && drag.d?.from === i} class:ic={cell.c.k === 'inst'}
         data-def={id} data-i={i}
         style:grid-column="{cell.x + 1} / span {cell.cs}"
         style:grid-row="{cell.y + 1} / span {cell.rs}">
@@ -47,7 +48,8 @@
     :global(.dragging) & { transition: none; }
   }
   .cell { position: relative; min-width: 0; min-height: 0; }
-  .pop { position: absolute; inset: 0; }
+  .pop { position: absolute; inset: 0; transition: opacity .2s; }
+  .lifted > .pop { opacity: .25; }
   .ic > .pop { container-type: size; }
   .inst {
     position: absolute; left: 50%; top: 50%;

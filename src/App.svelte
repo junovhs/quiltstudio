@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { scale } from 'svelte/transition';
   import { backOut } from 'svelte/easing';
-  import { Undo2, Redo2, Scissors, Settings, House, ChevronRight, Grid3x3, Ban, FolderOpen, Printer } from '@lucide/svelte';
+  import { Undo2, Redo2, Scissors, Settings, House, ChevronRight, Grid3x3, Ban, FolderOpen, Printer, Wand2 } from '@lucide/svelte';
   import Canvas from './components/Canvas.svelte';
   import Palette from './components/Palette.svelte';
   import Swatches from './components/Swatches.svelte';
@@ -11,6 +11,8 @@
   import MakeSheet from './components/MakeSheet.svelte';
   import Projects from './components/Projects.svelte';
   import Print from './components/Print.svelte';
+  import DragGhost from './components/DragGhost.svelte';
+  import Tidy from './components/Tidy.svelte';
   import Picker from './components/Picker.svelte';
   import Thumb from './components/Thumb.svelte';
   import { app, edit, undo, redo, goTo, scope, enter, loadImages, ui, stats } from './lib/store.svelte';
@@ -85,6 +87,7 @@
     <button class="icon" disabled={!app.canUndo} onclick={undo} title="Undo"><Undo2 size={19} /></button>
     <button class="icon" disabled={!app.canRedo} onclick={redo} title="Redo"><Redo2 size={19} /></button>
     <button class="icon seamsbtn" class:on={app.doc.settings.seams} title="Seams" onclick={() => edit(() => (app.doc.settings.seams = !app.doc.settings.seams))}><Grid3x3 size={19} /></button>
+    <button class="icon" popovertarget="tidy" title="Tidy sizes: snap to normal sizes"><Wand2 size={19} /></button>
     <button class="icon" title="Print blocks" onclick={() => (ui.print = app.path.length ? [app.path.at(-1)!] : [app.doc.root, ...stats().order])}><Printer size={19} /></button>
     <button class="icon" popovertarget="settings" title="Settings"><Settings size={19} /></button>
     <button class="make" onclick={() => (ui.make = true)} title="What to cut and sew">
@@ -103,6 +106,8 @@
 <MakeSheet />
 <Projects />
 <Print />
+<DragGhost />
+<Tidy />
 <Picker />
 
 <div popover id="settings">

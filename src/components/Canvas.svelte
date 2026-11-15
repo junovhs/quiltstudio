@@ -5,6 +5,7 @@
   import Node from './Node.svelte';
   import Ruler from './Ruler.svelte';
   import { app, scope, scopeId, begin, edit, save, enter, ui, rollback } from '../lib/store.svelte';
+  import { startDrag } from '../lib/drag.svelte';
   import { getRegion, setRegion, snap, symTargets, uses, xformN, xformRegion, sum } from '../lib/model';
 
   const b = $derived(scope());
@@ -137,6 +138,12 @@
     }
     if (tap && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) > 8) {
       clearTimeout(longTimer);
+      const c = tap.idx >= 0 ? b.cells[tap.idx]?.c : null;
+      if (app.tool === 'select' && c && c.k !== 'empty' && pts.size === 1 && !tap.long) {
+        startDrag(e.pointerId, e.clientX, e.clientY, c, tap.idx);
+        tap = null;
+        return;
+      }
       if (z.s > 1 || tap.idx < 0) pan = { x: e.clientX, y: e.clientY, z: { ...z } };
       tap = null;
     }

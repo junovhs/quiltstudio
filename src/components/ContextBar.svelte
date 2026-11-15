@@ -1,7 +1,7 @@
 <script lang="ts">
   import { scale, fly } from 'svelte/transition';
   import { backOut } from 'svelte/easing';
-  import { RotateCw, FlipHorizontal2, FlipVertical2, Combine, Group, Grid2x2, Trash2, Maximize2, X, Printer, Scissors } from '@lucide/svelte';
+  import { RotateCw, FlipHorizontal2, FlipVertical2, Combine, Group, Grid2x2, Trash2, Maximize2, X, Printer, Scissors, Lock, LockOpen } from '@lucide/svelte';
   import Tile from './Tile.svelte';
   import { app, edit, enter, scope, scopeId, ui } from '../lib/store.svelte';
   import { cellSize, fmt } from '../lib/calc';
@@ -50,6 +50,10 @@
       {/if}
       {#if first.c.k === 'inst' && sel.length === 1}
         <button class="icon" title="Open this block  ↵" onclick={() => first.c.k === 'inst' && enter(first.c.ref)}><Maximize2 size={17} /></button>
+        {@const blk = app.doc.blocks[first.c.ref]}
+        <button class="icon" class:on={blk?.locked} title={blk?.locked ? 'Size locked' : 'Lock its size'} onclick={() => edit(() => { if (blk) blk.locked = !blk.locked; })}>
+          {#if blk?.locked}<Lock size={17} />{:else}<LockOpen size={17} />{/if}
+        </button>
         <button class="icon" title="Print this block" onclick={() => first.c.k === 'inst' && (ui.print = [first.c.ref])}><Printer size={17} /></button>
         <span class="sep"></span>
       {/if}

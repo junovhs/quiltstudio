@@ -25,7 +25,7 @@ export type Content =
 export type Kind = Content['k'];
 
 export interface Cell { x: number; y: number; cs: number; rs: number; c: Content }
-export interface Block { id: string; name: string; cols: number[]; rows: number[]; cells: Cell[] }
+export interface Block { id: string; name: string; cols: number[]; rows: number[]; cells: Cell[]; /** keep this block's size when tidying */ locked?: boolean }
 export interface Fabric { id: string; name: string; color: string; tile: number; image?: boolean }
 /** the piece everything is sized from: e.g. "this checker square is my 1½″ template" */
 export interface Anchor { def: string; i: number; size: number }
