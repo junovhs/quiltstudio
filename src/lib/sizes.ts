@@ -1,7 +1,7 @@
 /* Odd-size finder: every distinct piece in the quilt (all identical copies grouped),
  * checked against the quilter's own square templates (cut sizes, seam included). */
 import { sum, frozenTracks, uses, type Block, type Cell, type Content, type Doc } from './model';
-import { scaleOf, cellSize } from './calc';
+import { scaleOf, cellSize, analyse } from './calc';
 
 export type Status = 'template' | 'ruler' | 'odd' | 'near';
 export interface Piece {
@@ -113,6 +113,7 @@ export function resizePiece(doc: Doc, p: Piece, size: number, shortTo = size): b
  */
 export function resizeCells(doc: Doc, where: Map<string, number[]>, target: (cw: number, ch: number) => [number, number]): boolean {
   const scales = new Map(Object.keys(doc.blocks).map(id => [id, id === doc.root ? { sx: 1, sy: 1 } : (scaleOf(doc, id) ?? { sx: 1, sy: 1 })]));
+  const squaresBefore = squareSet(doc);
   const k = (id: string, axis: 'col' | 'row') => (axis === 'col' ? scales.get(id)!.sx : scales.get(id)!.sy);
   const tr = (id: string, axis: 'col' | 'row') => (axis === 'col' ? doc.blocks[id].cols : doc.blocks[id].rows);
 
@@ -181,6 +182,7 @@ export function resizeCells(doc: Doc, where: Map<string, number[]>, target: (cw:
     if (!settle(id, 'col', dW, new Set(setC.keys()))) return false;
     if (!settle(id, 'row', dH, new Set(setR.keys()))) return false;
   }
+  keepSquaresInside(doc, scales, squaresBefore);
   // a pinned piece keeps whatever size it has now (so the pin doesn't rescale it all back)
   const a = doc.settings.anchor;
   if (a && doc.blocks[a.def]?.cells[a.i]) {
@@ -188,6 +190,32 @@ export function resizeCells(doc: Doc, where: Map<string, number[]>, target: (cw:
     if (cs) a.size = Math.min(cs.w, cs.h);
   }
   return true;
+}
+
+/**
+ * A block whose slot got longer/shorter in one direction would be stretched evenly, which spoils
+ * its perfect squares. Instead: rows/columns that hold squares keep their size, the others
+ * (triangles, bands…) take up the change. Outside-in, so each block sees its final slot.
+ */
+function keepSquaresInside(doc: Doc, old: Map<string, { sx: number; sy: number }>, squares: Set<string>) {
+  const order = [...analyse(doc).order].reverse();
+  for (const id of order) {
+    const b = doc.blocks[id], o = old.get(id), n = scaleOf(doc, id);
+    if (!b || !o || !n) continue;
+    for (const axis of ['col', 'row'] as const) {
+      const t = axis === 'col' ? b.cols : b.rows, os = axis === 'col' ? o.sx : o.sy, ns = axis === 'col' ? n.sx : n.sy;
+      if (Math.abs(ns / os - 1) < 1e-6) continue;
+      const oldReal = t.map(v => v * os), total = sum(t) * ns;
+      const p = axis === 'col' ? 'x' : 'y', sp = axis === 'col' ? 'cs' : 'rs';
+      const keep = new Set<number>();
+      b.cells.forEach((c, i) => { if (squares.has(`${id}:${i}`)) for (let k = c[p]; k < c[p] + c[sp]; k++) keep.add(k); });
+      const free = t.map((_, i) => i).filter(i => !keep.has(i));
+      const kept = [...keep].reduce((s2, i) => s2 + oldReal[i], 0), room = free.reduce((s2, i) => s2 + oldReal[i], 0);
+      const left = total - kept;
+      if (!free.length || room <= 0 || left < free.length * 0.25) continue;     // can't: leave it stretched
+      t.forEach((_, i) => { t[i] = (keep.has(i) ? oldReal[i] : oldReal[i] * left / room) / ns; });
+    }
+  }
 }
 
 /* ---------------- keep perfect squares perfect ---------------- */

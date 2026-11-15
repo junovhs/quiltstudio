@@ -43,7 +43,14 @@
     input.value = `${fmt(cur.w, '')} × ${fmt(cur.h)}`;
     if (!v) return;
     const here = scopeId(), cells = [...sel];
-    const ok = tryChange(() => resizeCells(app.doc, new Map([[here, cells]]), () => v), cells.map(i => `${here}:${i}`));
+    // typing a size on a locked block is your explicit choice: allow it (the lock still protects it from everything else)
+    const ok = tryChange(() => {
+      const unlocked = cells.map(i => b.cells[i].c).filter(c => c.k === 'inst' && app.doc.blocks[c.ref]?.locked).map(c => (c as { ref: string }).ref);
+      unlocked.forEach(id => (app.doc.blocks[id].locked = false));
+      const r = resizeCells(app.doc, new Map([[here, cells]]), () => v);
+      unlocked.forEach(id => (app.doc.blocks[id].locked = true));
+      return r;
+    }, cells.map(i => `${here}:${i}`));
     if (!ok) { refused = true; setTimeout(() => (refused = false), 500); }
   }
   /** "I cut it at 5″": finished = cut − seams; every identical piece changes, locks still win */
