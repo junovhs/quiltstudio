@@ -1,4 +1,5 @@
-import { sum, type Content, type Doc } from './model';
+import { sum, upright, type Content, type Doc } from './model';
+import { SNOW } from './shapes';
 
 /* ---------- numbers ---------- */
 const EIGHTHS = ['', '⅛', '¼', '⅜', '½', '⅝', '¾', '⅞'];
@@ -87,6 +88,36 @@ export function analyse(doc: Doc) {
           addCut(c.g, L + 2 * s, S + 2 * s, 1, 'goose rectangle (stitch-and-flip)');
           addCut(c.s, S + 2 * s, S + 2 * s, 2, 'sky squares (stitch-and-flip)');
           if (Math.abs(L - 2 * S) > 1e-3) warnings.add(`One-piece geese ${dim(L, S)} aren't 2:1, so stitch-and-flip points won't be sharp.`);
+          break;
+        }
+        // stitch-and-flip units: a base piece, with squares sewn on the corners and trimmed
+        case 'sis': case 'snow': {
+          const share = c.k === 'sis' ? 1 / 2 : SNOW, m = Math.min(cw, ch);
+          const name = c.k === 'sis' ? 'Square-in-a-square' : 'Snowball';
+          addUnit(name, cw, ch, [c.c, c.o], c);
+          addCut(c.c, cw + 2 * s, ch + 2 * s, 1, `${name.toLowerCase()} base (stitch-and-flip)`);
+          addCut(c.o, m * share + 2 * s, m * share + 2 * s, 4, `${name.toLowerCase()} corners (stitch-and-flip)`);
+          if (!square) warnings.add(`${dim(cw, ch)} ${name.toLowerCase()} units aren't square, so their corners won't be even.`);
+          break;
+        }
+        case 'cnr': {
+          const m = Math.min(cw, ch) / 2;
+          addUnit('Corner triangle', cw, ch, [c.a, c.b], upright(c));
+          addCut(c.b, cw + 2 * s, ch + 2 * s, 1, 'corner-triangle base (stitch-and-flip)');
+          addCut(c.a, m + 2 * s, m + 2 * s, 1, 'corner square (stitch-and-flip)');
+          break;
+        }
+        case 'tri3':
+          addUnit('Three-triangle square', cw, ch, [c.a, c.b, c.d], upright(c));
+          if (!square) warnings.add(`${dim(cw, ch)} three-triangle squares aren't square; sizes are approximate.`);
+          addTri(c.a, Math.max(cw, ch), 2); addTri(c.b, Math.max(cw, ch), 4); addTri(c.d, Math.max(cw, ch), 4);
+          break;
+        case 'strips': {
+          const n = c.f.length;
+          const [sw, sh] = c.dir === 'h' ? [cw, ch / n] : [cw / n, ch];
+          const u = upright(c) as typeof c;
+          addUnit(`${n}-strip unit`, cw, ch, [...u.f], u);
+          for (const f of c.f) addCut(f, sw + 2 * s, sh + 2 * s, 1, 'strip');
           break;
         }
         case 'inst': {

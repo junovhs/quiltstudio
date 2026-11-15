@@ -2,7 +2,8 @@
  *
  * A design is a set of BLOCKS. Each block is a grid: column widths and row
  * heights in inches, and cells that sit on that grid (cells can span).
- * A cell holds one PRIMITIVE (solid, HST, QST, one-piece goose) or an
+ * A cell holds one PRIMITIVE (solid, HST, QST, goose, square-in-a-square, snowball,
+ * corner triangle, three-triangle square, strips) or an
  * INSTANCE of another block (rotated / flipped). The quilt is just the root
  * block. Edit a block once and every instance of it changes.
  */
@@ -20,6 +21,16 @@ export type Content =
   | { k: 'qst'; f: [string, string, string, string] }
   /** one-piece flying goose: goose triangle `g` points `dir`, sky `s` */
   | { k: 'goose'; g: string; s: string; dir: Dir }
+  /** square-in-a-square: centre diamond `c`, corner triangles `o` */
+  | { k: 'sis'; c: string; o: string }
+  /** snowball: centre `c` with all four corners clipped in `o` */
+  | { k: 'snow'; c: string; o: string }
+  /** corner triangle (stitch-and-flip): small triangle `a` at `corner`, the rest `b` */
+  | { k: 'cnr'; a: string; b: string; corner: Corner }
+  /** three-triangle square: big half `a` at `corner`, the other half split into `b` then `d` (clockwise) */
+  | { k: 'tri3'; a: string; b: string; d: string; corner: Corner }
+  /** strips (rail fence): equal strips, top to bottom ('h') or left to right ('v') */
+  | { k: 'strips'; f: string[]; dir: 'h' | 'v' }
   | { k: 'inst'; ref: string; rot: Rot; flip: boolean };
 
 export type Kind = Content['k'];
@@ -83,6 +94,13 @@ export function xform(c: Content, t: Xf): Content {
   switch (c.k) {
     case 'hst': return { ...c, corner: CORNER[t][c.corner] };
     case 'goose': return { ...c, dir: DIR[t][c.dir] };
+    case 'cnr': return { ...c, corner: CORNER[t][c.corner] };
+    // turning keeps b/d in clockwise order; a mirror reverses it
+    case 'tri3': return t === 'r' ? { ...c, corner: CORNER.r[c.corner] } : { ...c, corner: CORNER[t][c.corner], b: c.d, d: c.b };
+    case 'strips': {
+      const rev = stripsReverse(c.dir, t);
+      return { ...c, dir: t === 'r' ? (c.dir === 'h' ? 'v' : 'h') : c.dir, f: rev ? [...c.f].reverse() : c.f };
+    }
     case 'qst': {
       const [T, R, B, L] = c.f;
       return { ...c, f: t === 'h' ? [T, L, B, R] : t === 'v' ? [B, R, T, L] : [L, T, R, B] };
@@ -98,6 +116,11 @@ export function xform(c: Content, t: Xf): Content {
 }
 export const xformN = (c: Content, ts: Xf[]) => ts.reduce(xform, c);
 
+/** does this transform reverse the order of the strips? */
+function stripsReverse(dir: 'h' | 'v', t: Xf) {
+  return t === 'r' ? dir === 'h' : t === 'h' ? dir === 'v' : dir === 'h';
+}
+
 /* ---------------- regions (the clickable / recolourable parts) ---------------- */
 export function regionsOf(c: Content): string[] {
   switch (c.k) {
@@ -105,6 +128,10 @@ export function regionsOf(c: Content): string[] {
     case 'hst': return ['a', 'b'];
     case 'qst': return ['0', '1', '2', '3'];
     case 'goose': return ['g', 's'];
+    case 'sis': case 'snow': return ['c', 'o'];
+    case 'cnr': return ['a', 'b'];
+    case 'tri3': return ['a', 'b', 'd'];
+    case 'strips': return c.f.map((_, i) => String(i));
     default: return [];
   }
 }
@@ -113,6 +140,10 @@ export function getRegion(c: Content, r: string): string | null {
   if (c.k === 'hst') return r === 'a' ? c.a : c.b;
   if (c.k === 'qst') return c.f[+r];
   if (c.k === 'goose') return r === 'g' ? c.g : c.s;
+  if (c.k === 'sis' || c.k === 'snow') return r === 'c' ? c.c : c.o;
+  if (c.k === 'cnr') return r === 'a' ? c.a : c.b;
+  if (c.k === 'tri3') return r === 'a' ? c.a : r === 'b' ? c.b : c.d;
+  if (c.k === 'strips') return c.f[+r] ?? null;
   return null;
 }
 export function setRegion(c: Content, r: string, f: string): Content {
@@ -121,10 +152,20 @@ export function setRegion(c: Content, r: string, f: string): Content {
   if (c.k === 'hst') return r === 'a' ? { ...c, a: f } : { ...c, b: f };
   if (c.k === 'qst') { const q = [...c.f] as [string, string, string, string]; q[+r] = f; return { ...c, f: q }; }
   if (c.k === 'goose') return r === 'g' ? { ...c, g: f } : { ...c, s: f };
+  if (c.k === 'sis' || c.k === 'snow') return r === 'c' ? { ...c, c: f } : { ...c, o: f };
+  if (c.k === 'cnr') return r === 'a' ? { ...c, a: f } : { ...c, b: f };
+  if (c.k === 'tri3') return { ...c, [r === 'a' ? 'a' : r === 'b' ? 'b' : 'd']: f };
+  if (c.k === 'strips') { const q = [...c.f]; q[+r] = f; return { ...c, f: q }; }
   return c;
 }
 /** region index after transform, so symmetric recolouring hits the matching triangle */
 export function xformRegion(c: Content, r: string, ts: Xf[]): string {
+  if (c.k === 'tri3') return r === 'a' ? r : ts.filter(t => t !== 'r').length % 2 ? (r === 'b' ? 'd' : 'b') : r;
+  if (c.k === 'strips') {
+    let i = +r, dir = c.dir;
+    for (const t of ts) { if (stripsReverse(dir, t)) i = c.f.length - 1 - i; if (t === 'r') dir = dir === 'h' ? 'v' : 'h'; }
+    return String(i);
+  }
   if (c.k !== 'qst') return r;
   let i = +r; // 0 top 1 right 2 bottom 3 left
   for (const t of ts) i = t === 'h' ? [0, 3, 2, 1][i] : t === 'v' ? [2, 1, 0, 3][i] : (i + 1) % 4;
@@ -142,8 +183,30 @@ export function makeKind(kind: Kind, fabs: string[], fallback: string, ref?: str
     case 'hst': return { k: 'hst', a: A, b: B, corner: 'tl' };
     case 'qst': return { k: 'qst', f: [A, B, fabs[2] ?? A, fabs[3] ?? B] };
     case 'goose': return { k: 'goose', g: A, s: B, dir: 'up' };
+    case 'sis': return { k: 'sis', c: A, o: B };
+    case 'snow': return { k: 'snow', c: A, o: B };
+    case 'cnr': return { k: 'cnr', a: A, b: B, corner: 'tl' };
+    case 'tri3': return { k: 'tri3', a: A, b: B, d: fabs[2] ?? A, corner: 'tl' };
+    case 'strips': return { k: 'strips', f: [A, B, fabs[2] ?? A], dir: 'h' };
     case 'inst': return { k: 'inst', ref: ref!, rot: 0, flip: false };
     default: return { k: 'empty' };
+  }
+}
+
+/** every unit kind, in palette order, with its name */
+export const UNITS: [Kind, string][] = [
+  ['solid', 'Square'], ['hst', 'Half-square triangle'], ['qst', 'Quarter-square triangle'], ['goose', 'Flying goose'],
+  ['sis', 'Square-in-a-square'], ['snow', 'Snowball'], ['cnr', 'Corner triangle'], ['tri3', 'Three-triangle square'], ['strips', 'Strips (rail fence)'],
+];
+/** the same unit with its turn/flip taken out, so copies in any orientation count together */
+export function upright(c: Content): Content {
+  switch (c.k) {
+    case 'hst': case 'cnr': return { ...c, corner: 'tl' };
+    case 'tri3': return { ...c, corner: 'tl' };
+    case 'goose': return { ...c, dir: 'up' };
+    // a strip unit turned half way round is the same unit: pick one reading order
+    case 'strips': { const r = [...c.f].reverse(); return { ...c, dir: 'h', f: r.join() < c.f.join() ? r : c.f }; }
+    default: return c;
   }
 }
 

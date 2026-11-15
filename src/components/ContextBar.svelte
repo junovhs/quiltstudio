@@ -6,14 +6,14 @@
   import { app, edit, enter, scope, scopeId, ui, rollback, tryChange } from '../lib/store.svelte';
   import { pieces, whereIs, resizePiece, resizeCells, parseSize } from '../lib/sizes';
   import { cellSize, fmt } from '../lib/calc';
-  import { fabricsOf, groupToBlock, makeKind, merge, mergeSame, snap, splitCell, xform, cellIndexAt, type Kind, type Xf } from '../lib/model';
+  import { fabricsOf, groupToBlock, makeKind, merge, mergeSame, snap, splitCell, xform, cellIndexAt, UNITS, type Kind, type Xf } from '../lib/model';
 
   const b = $derived(scope());
   const sel = $derived(app.sel.filter(i => b.cells[i]));
   const first = $derived(sel.length ? b.cells[sel[0]] : null);
   let splitting = $state(false);
   const SPLITS: [number, number][] = [[2, 1], [1, 2], [2, 2], [3, 3], [4, 4]];
-  const KINDS: Kind[] = ['solid', 'hst', 'qst', 'goose'];
+  const KINDS = UNITS;
 
   const each = (fn: (i: number) => void) => edit(() => sel.forEach(fn));
   const xf = (t: Xf) => each(i => { b.cells[i].c = xform(snap(b.cells[i].c), t); });
@@ -105,8 +105,8 @@
       <button class="icon" title="Flip  F" onclick={() => xf('h')}><FlipHorizontal2 size={17} /></button>
       <button class="icon" title="Flip  ⇧F" onclick={() => xf('v')}><FlipVertical2 size={17} /></button>
       <span class="sep"></span>
-      {#each KINDS as k}
-        <button class="kind" class:on={first.c.k === k} onclick={() => setKind(k)}><Tile c={sample(k)} /></button>
+      {#each KINDS as [k, name]}
+        <button class="kind" class:on={first.c.k === k} title={name} onclick={() => setKind(k)}><Tile c={sample(k)} /></button>
       {/each}
       <span class="sep"></span>
       {#if first.c.k !== 'inst' && first.c.k !== 'empty'}

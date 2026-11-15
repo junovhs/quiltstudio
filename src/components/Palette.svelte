@@ -9,7 +9,7 @@
   import { taps } from '../lib/gestures';
   import { swipeClose } from '../lib/sheet';
   import { pickUp, placeInSelection } from '../lib/drag.svelte';
-  import { fabricsOf, makeKind, setRegion, snap, uid, xform, type Content, type Kind, type Sym, type Xf } from '../lib/model';
+  import { fabricsOf, makeKind, setRegion, snap, uid, xform, UNITS, type Content, type Kind, type Sym, type Xf } from '../lib/model';
   import { openPicker } from '../lib/picker.svelte';
 
   const TOOLS: [Tool, typeof MousePointer2, string][] = [
@@ -20,14 +20,13 @@
   ];
   // the four shapes, drawn with the current fabrics
   const shape = (k: Kind): Content => makeKind(k, app.brush.k === 'inst' ? [app.fabric, 'cream'] : fabricsOf(app.brush), app.fabric);
-  const KINDS: Kind[] = ['solid', 'hst', 'qst', 'goose'];
 
   const blocks = $derived(Object.values(app.doc.blocks).filter(b => b.id !== app.doc.root));
   const toolIndex = $derived(TOOLS.findIndex(t => t[0] === app.tool));
 
   function brushKind(k: Kind) {
     const c = shape(k);
-    if (c.k === 'hst' && app.brush.k === 'hst') c.corner = app.brush.corner;
+    if ((c.k === 'hst' || c.k === 'cnr' || c.k === 'tri3') && 'corner' in app.brush) c.corner = app.brush.corner;
     app.brush = c; app.tool = 'paint'; ui.palette = false;
   }
   // tap a block: drop it into the selected slot(s); otherwise it just becomes the current block
@@ -94,8 +93,8 @@
   </div>
 
   <div class="shapes">
-    {#each KINDS as k}
-      <button class="shape" class:on={app.tool === 'paint' && app.brush.k === k} title={k === 'solid' ? 'Square' : k === 'hst' ? 'Half-square triangle' : k === 'qst' ? 'Quarter-square triangle' : 'One-piece goose'}
+    {#each UNITS as [k, name]}
+      <button class="shape" class:on={app.tool === 'paint' && app.brush.k === k} title={name}
         draggable="false" onpointerdown={e => pickUp(e, shape(k))} onclick={() => brushKind(k)}>
         <Tile c={shape(k)} />
       </button>
@@ -134,7 +133,7 @@
   .preview { position: relative; width: 84px; height: 84px; padding: 0; border: 0; border-radius: 12px; overflow: hidden; background: var(--sunk); box-shadow: var(--shadow); flex: none; }
   .in { position: absolute; inset: 0; }
   .turns { display: flex; flex-direction: column; gap: 2px; }
-  .shapes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .shapes { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
   .shape { position: relative; aspect-ratio: 1; padding: 0; border: 0; border-radius: 8px; overflow: hidden; background: none;
     box-shadow: 0 0 0 0 transparent; transition: box-shadow .25s, scale .35s var(--spring);
     &:hover { scale: 1.06; } &.on { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent); } }

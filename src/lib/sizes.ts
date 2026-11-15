@@ -1,6 +1,6 @@
 /* Odd-size finder: every distinct piece in the quilt (all identical copies grouped),
  * checked against the quilter's own square templates (cut sizes, seam included). */
-import { sum, frozenTracks, uses, type Block, type Cell, type Content, type Doc } from './model';
+import { sum, frozenTracks, uses, upright, fabricsOf, type Block, type Cell, type Content, type Doc } from './model';
 import { scaleOf, cellSize, analyse } from './calc';
 
 export type Status = 'template' | 'ruler' | 'odd' | 'near';
@@ -10,7 +10,7 @@ export interface Piece {
   cut: number | null;                    // square size you'd cut / trim to with a template
   status: Status;
   template: number | null;               // the template that does it
-  kind: 'square' | 'rect' | 'hst' | 'qst' | 'goose';
+  kind: 'square' | 'rect' | 'hst' | 'qst' | 'goose' | 'unit';
 }
 
 const near = (a: number, b: number) => Math.abs(a - b) < 1 / 32;
@@ -28,11 +28,11 @@ export function pieces(doc: Doc): Piece[] {
     if (c.k === 'solid') { kind = sq ? 'square' : 'rect'; if (sq) cut = w + 2 * s; }
     else if (c.k === 'hst') { kind = 'hst'; if (sq) cut = w + 2 * s; }          // trim-to size: what you square it up with
     else if (c.k === 'qst') { kind = 'qst'; if (sq) cut = w + 5 * s; }          // cut size, then cut twice on the diagonal
-    else { kind = 'goose'; }
+    else if (c.k === 'goose') { kind = 'goose'; }
+    else { kind = 'unit'; if (sq) cut = w + 2 * s; }                              // trim-to size of the finished unit
     const [L, S] = w >= h ? [w, h] : [h, w];
-    const norm: Content = c.k === 'hst' ? { ...c, corner: 'tl' } : c.k === 'goose' ? { ...c, dir: 'up' } : c;
-    const fabrics = c.k === 'solid' ? [c.f] : c.k === 'hst' ? [c.a, c.b].sort() : c.k === 'qst' ? [...c.f].sort() : c.k === 'goose' ? [c.g, c.s] : [];
-    const key = keyOf(c, w, h); void L; void S; void fabrics;
+    const norm: Content = upright(c);
+    const key = keyOf(c, w, h);
     const e = out.get(key);
     if (e) { e.qty++; return; }
     const fin = w;
@@ -90,9 +90,9 @@ export function whereIs(doc: Doc, p: Piece): Map<string, number[]> {
 
 function keyOf(c: Content, w: number, h: number) {
   const sq = Math.abs(w - h) < 1 / 32;
-  const kind = c.k === 'solid' ? (sq ? 'square' : 'rect') : c.k === 'hst' ? 'hst' : c.k === 'qst' ? 'qst' : 'goose';
+  const kind = c.k === 'solid' ? (sq ? 'square' : 'rect') : c.k;
   const [L, S] = w >= h ? [w, h] : [h, w];
-  const fabrics = c.k === 'solid' ? [c.f] : c.k === 'hst' ? [c.a, c.b].sort() : c.k === 'qst' ? [...c.f].sort() : c.k === 'goose' ? [c.g, c.s] : [];
+  const fabrics = c.k === 'solid' ? [c.f] : c.k === 'hst' || c.k === 'qst' ? fabricsOf(c).sort() : fabricsOf(upright(c));
   return `${kind}|${fabrics}|${L.toFixed(3)}|${S.toFixed(3)}`;
 }
 

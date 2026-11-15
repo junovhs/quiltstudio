@@ -1,5 +1,6 @@
 /* Draws the design onto a <canvas>: used for project thumbnails and the PNG one-sheet. */
 import { sum, type Content, type Doc } from './model';
+import { partsOf, place } from './shapes';
 import { analyse, dim, fmt, yd } from './calc';
 
 export type Paints = Record<string, string | CanvasPattern>;
@@ -67,8 +68,11 @@ export function drawContent(ctx: Ctx, doc: Doc, p: Paints, c: Content, x: number
       ctx.restore();
       break;
     }
-    default:
+    default: {
+      const parts = partsOf(c);
+      if (parts) { for (const pt of parts) poly(ctx, p, pt.f, place(pt.pts, x, y, w, h)); break; }
       ctx.fillStyle = '#e9e2d6'; ctx.fillRect(x, y, w, h);
+    }
   }
 }
 

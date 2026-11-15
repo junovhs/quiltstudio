@@ -1,7 +1,8 @@
 /* Printable block diagrams as SVG, drawn in real inches:
  * flat fabric colours (or pale "ink saver" tints), bold cut lines between pieces,
  * an inch grid, and the size of every row/column along the edges. */
-import { sum, type Block, type Content, type Doc } from './model';
+import { sum, upright, type Block, type Content, type Doc } from './model';
+import { partsOf, place } from './shapes';
 import { analyse, fmt } from './calc';
 
 export interface PrintOpts { ink: boolean; actual: boolean; grid?: boolean; line?: string; weight?: number }
@@ -55,7 +56,15 @@ function piece(c: Content, fill: Record<string, string>, x: number, y: number, w
       return { shapes: poly(F(c.s), R) + poly(F(c.g), G), cuts: line([G[0], G[1], G[4], G[5], G[2], G[3]]) };
     }
     case 'empty': return { shapes: `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#fff"/>`, cuts: '' };
-    default: return { shapes: '', cuts: '' };
+    default: {
+      const parts = partsOf(c);
+      if (!parts) return { shapes: '', cuts: '' };
+      // seam lines: the outline of every part laid on top of the first (the outer edge is drawn by the block)
+      return {
+        shapes: parts.map(pt => poly(F(pt.f), place(pt.pts, x, y, w, h))).join(''),
+        cuts: parts.slice(1).map(pt => { const q = place(pt.pts, x, y, w, h); return line([...q, q[0], q[1]]); }).join(''),
+      };
+    }
   }
 }
 
@@ -165,8 +174,7 @@ export function piecesOf(doc: Doc, id: string) {
     let cw = sum(b.cols, cell.x, cell.cs) * sx, ch = sum(b.rows, cell.y, cell.rs) * sy;
     let c = cell.c;
     if (c.k === 'inst') { if (c.rot % 2) [cw, ch] = [ch, cw]; c = { ...c, rot: 0, flip: false }; }
-    else if (c.k === 'hst') c = { ...c, corner: 'tl' };
-    else if (c.k === 'goose') c = { ...c, dir: 'up' };
+    else c = upright(c);
     if (cw < ch && c.k !== 'inst') [cw, ch] = [ch, cw];
     const key = JSON.stringify(c) + `|${cw.toFixed(3)}|${ch.toFixed(3)}`;
     const e = out.get(key) ?? { c, w: cw, h: ch, n: 0 };

@@ -1,6 +1,8 @@
 <script lang="ts">
   import type { Content } from '../lib/model';
+  import { partsOf, clip } from '../lib/shapes';
   let { c }: { c: Content } = $props();
+  const parts = $derived(partsOf(c));
   const HST = { tl: '0 0,100% 0,0 100%', tr: '0 0,100% 0,100% 100%', br: '100% 0,100% 100%,0 100%', bl: '0 0,0 100%,100% 100%' };
   const QST = ['0 0,100% 0,50% 50%', '100% 0,100% 100%,50% 50%', '0 100%,100% 100%,50% 50%', '0 0,0 100%,50% 50%'];
   const GOOSE = { up: '0 100%,100% 100%,50% 0', down: '0 0,100% 0,50% 100%', left: '100% 0,100% 100%,0 50%', right: '0 0,0 100%,100% 50%' };
@@ -20,6 +22,10 @@
 {:else if c.k === 'goose'}
   <div class="rg f-{c.s}" data-r="s"></div>
   <div class="rg f-{c.g}" data-r="g" style:clip-path="polygon({GOOSE[c.dir]})"></div>
+{:else if parts}
+  {#each parts as p, i}
+    <div class="rg f-{p.f}" data-r={p.r} style:clip-path={i ? clip(p.pts) : null}></div>
+  {/each}
 {:else}
   <div class="rg empty-fill" data-r="e"></div>
 {/if}
