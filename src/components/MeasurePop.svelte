@@ -6,6 +6,7 @@
   import Thumb from './Thumb.svelte';
   import { app, edit, ui } from '../lib/store.svelte';
   import { cellSize, fmt } from '../lib/calc';
+  import { templateFinished } from '../lib/sizes';
 
   const m = $derived(ui.measure);
   const cell = $derived(m ? app.doc.blocks[m.def]?.cells[m.i] : null);
@@ -42,8 +43,8 @@
     <!-- my template squares, drawn to scale: tap one to size everything from this piece -->
     <div class="templates">
       {#each app.doc.settings.templates as t}
-        <button class="tpl" class:on={pinned && Math.abs(app.doc.settings.anchor!.size + 2 * app.doc.settings.seam - t) < 1e-6} class:match={!pinned && Math.abs(short + 2 * app.doc.settings.seam - t) < 1e-6}
-          title="Your {fmt(t)} square (cut) → {fmt(t - 2 * app.doc.settings.seam)} finished" onclick={() => pinAt(t - 2 * app.doc.settings.seam)}>
+        <button class="tpl" class:on={pinned && Math.abs(app.doc.settings.anchor!.size - templateFinished(app.doc, t)) < 1e-6} class:match={!pinned && Math.abs(short - templateFinished(app.doc, t)) < 1e-6}
+          title="Your {fmt(t)} square → {fmt(templateFinished(app.doc, t))} finished" onclick={() => pinAt(templateFinished(app.doc, t))}>
           <span class="sq" style:--s={t / maxT}></span>
           <span class="lbl">{fmt(t, '')}</span>
         </button>

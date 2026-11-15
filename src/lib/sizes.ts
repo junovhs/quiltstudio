@@ -17,10 +17,10 @@ const near = (a: number, b: number) => Math.abs(a - b) < 1 / 32;
 const onQuarter = (v: number) => near(v * 4, Math.round(v * 4));
 
 export function pieces(doc: Doc): Piece[] {
-  const s = doc.settings.seam, T = doc.settings.templates, F = doc.settings.finishedTemplates ?? [];
+  const s = doc.settings.seam, T = doc.settings.templates;
   const out = new Map<string, Piece>();
-  // a template matches if its size is the cut size (seam included) — or, for finished-size templates, the finished size
-  const tpl = (cut: number, fin: number) => T.find(t => (F.includes(t) ? near(t, fin) : near(t, cut))) ?? null;
+  // a template fits when the finished square it makes (its size minus its own seam allowance) is this piece
+  const tpl = (_cut: number, fin: number) => T.find(t => near(templateFinished(doc, t), fin)) ?? null;
 
   function add(c: Content, w: number, h: number, def: string, i: number) {
     let kind: Piece['kind'], cut: number | null = null;
@@ -35,7 +35,7 @@ export function pieces(doc: Doc): Piece[] {
     const key = keyOf(c, w, h); void L; void S; void fabrics;
     const e = out.get(key);
     if (e) { e.qty++; return; }
-    const fin = kind === 'qst' ? (cut ?? 0) - 5 * s : (cut ?? 0) - 2 * s;
+    const fin = w;
     const t = cut != null ? tpl(cut, fin) : null;
     // looks square but isn't: the easiest mistake to miss
     const nearSquare = !sq && L / S < 1.25 && kind !== 'goose';
@@ -60,10 +60,12 @@ export function pieces(doc: Doc): Piece[] {
 }
 
 /** the finished size a piece must be so that a template cuts it */
-export function finishedFor(p: Piece, template: number, seam: number, finishedSize = false) {
-  if (finishedSize) return template;
-  return p.kind === 'qst' ? template - 5 * seam : template - 2 * seam;
-}
+/** a template's own built-in seam allowance (0 = it's the finished size) */
+export const templateSeam = (doc: Doc, t: number) => doc.settings.templateSeams?.[String(t)] ?? 0.25;
+/** the finished square a template makes */
+export const templateFinished = (doc: Doc, t: number) => t - 2 * templateSeam(doc, t);
+/** the finished size a piece becomes when you use this template */
+export function finishedFor(doc: Doc, t: number) { return templateFinished(doc, t); }
 
 /** every cell (in any block) that holds this same piece, as [block, cell index] */
 export function whereIs(doc: Doc, p: Piece): Map<string, number[]> {

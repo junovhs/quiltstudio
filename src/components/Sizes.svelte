@@ -5,11 +5,10 @@
   import Tile from './Tile.svelte';
   import { app, edit, ui } from '../lib/store.svelte';
   import { fmt } from '../lib/calc';
-  import { pieces, whereIs, resizePiece, finishedFor, type Piece } from '../lib/sizes';
+  import { pieces, whereIs, resizePiece, finishedFor, templateSeam, type Piece } from '../lib/sizes';
 
   const list = $derived(pieces(app.doc));
   const seam = $derived(app.doc.settings.seam);
-  const F = $derived(app.doc.settings.finishedTemplates ?? []);
   let open = $state<string | null>(null);
   let newT = $state('');
 
@@ -20,9 +19,10 @@
     open = open === p.key ? null : p.key;
     ui.glow = open ? spots(p) : [];
   }
-  const isF = (t: number) => F.includes(t);
+  const sa = (t: number) => templateSeam(app.doc, t);
+  const isF = (t: number) => sa(t) === 0;
   function fix(p: Piece, t: number) {
-    const v = finishedFor(p, t, seam, isF(t));
+    const v = finishedFor(app.doc, t);
     if (v <= 0) return;
     edit(() => resizePiece(app.doc, p, v));
     ui.glow = [];
@@ -31,10 +31,10 @@
   const maxT = $derived(Math.max(...T, 1));
   function addT() { const v = parseFloat(newT.replace(',', '.')); newT = ''; if (v > 0 && !T.includes(v)) edit(() => app.doc.settings.templates.push(v)); }
   const delT = (t: number) => edit(() => (app.doc.settings.templates = app.doc.settings.templates.filter(x => x !== t)));
-  // tap a template: switch between "cut size, seam included" and "finished size"
+  // tap a template to set its own seam allowance: none (finished size) → ¼ → ½
   const flipT = (t: number) => edit(() => {
-    const f = app.doc.settings.finishedTemplates ?? [];
-    app.doc.settings.finishedTemplates = f.includes(t) ? f.filter(x => x !== t) : [...f, t];
+    const next = { 0: 0.25, 0.25: 0.5, 0.5: 0 }[sa(t)] ?? 0.25;
+    app.doc.settings.templateSeams = { ...(app.doc.settings.templateSeams ?? {}), [t]: next };
   });
   const SEAMS = [0.25, 0.375, 0.5];
 </script>
@@ -74,9 +74,9 @@
                 <span class="div"></span>
               {/if}
               {#each T as t}
-                {@const v = finishedFor(p, t, seam, isF(t))}
+                {@const v = finishedFor(app.doc, t)}
                 <button class="chip" class:on={p.template === t} class:fin={isF(t)} disabled={v <= 0}
-                  title="Your {fmt(t)} {isF(t) ? 'finished-size' : 'cut-size'} square → {fmt(Math.max(v, 0))} finished" onclick={() => fix(p, t)}>
+                  title="Your {fmt(t)} square{isF(t) ? ' (finished size)' : ` (${fmt(sa(t))} seam)`} → {fmt(Math.max(v, 0))} finished" onclick={() => fix(p, t)}>
                   <i style:--s={t / maxT}></i>{fmt(t)}<small>→{fmt(Math.max(v, 0), '')}</small>
                 </button>
               {/each}
@@ -86,11 +86,11 @@
       {/each}
     </div>
 
-    <!-- your templates: solid = cut size (seam included), outline = finished size. Tap to switch. -->
+    <!-- your templates, each with its own seam allowance (□ = finished size). Tap to change it. -->
     <div class="mine">
       {#each T as t}
         <span class="mt" class:fin={isF(t)}>
-          <button class="flip" title={isF(t) ? 'Finished size (no seam). Tap: includes seam' : 'Includes seam. Tap: finished size'} onclick={() => flipT(t)}><i style:--s={t / maxT}></i>{fmt(t)}</button>
+          <button class="flip" title="Its own seam allowance: {isF(t) ? 'none (finished size)' : fmt(sa(t))} — tap to change" onclick={() => flipT(t)}><i style:--s={t / maxT}></i>{fmt(t)}<small class="sa">{isF(t) ? '□' : '+' + fmt(sa(t), '')}</small></button>
           <button class="x" title="Remove" onclick={() => delT(t)}><X size={11} /></button>
         </span>
       {/each}
@@ -131,7 +131,7 @@
   .nsq { display: grid; place-items: center; width: 22px; height: 22px; i { width: 16px; height: 13px; border: 2px dashed oklch(60% 0.16 55); border-radius: 2px; } }
   .mine { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 10px 12px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); }
   .mt { display: inline-flex; align-items: center; border-radius: 8px; background: var(--sunk);
-    .flip { border: 0; background: none; padding: 5px 4px 5px 8px; }
+    .flip { border: 0; background: none; padding: 5px 4px 5px 8px; .sa { font-size: 10px; color: var(--muted); font-weight: 700; } }
     .x { width: 20px; height: 20px; padding: 0; border: 0; background: none; display: grid; place-items: center; color: var(--muted); } }
   .add { display: inline-flex; align-items: center; gap: 2px; padding: 0 6px; border-radius: 8px; border: 1.5px dashed var(--line); color: var(--muted);
     input { width: 3.5em; field-sizing: fixed; border: 0; background: none; padding: 4px 0; } }
