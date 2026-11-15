@@ -24,11 +24,14 @@ function normalise(d: Doc): Doc {
     d.settings.templateSeams = Object.fromEntries(d.settings.templates.map(t => [t, (d.settings.finishedTemplates ?? []).includes(t) ? 0 : 0.25]));
   }
   // the 5″ guide (no seam allowance)
+  // the 5″ guide has no seam allowance (fix for quilts saved while it was wrongly set)
+  if (tplV < 3) { d.settings.templateSeams = { ...d.settings.templateSeams, 5: 0 }; }
   if (tplV < 2) {
     if (!d.settings.templates.includes(5)) d.settings.templates = [...d.settings.templates, 5].sort((a, b) => a - b);
     d.settings.templateSeams = { ...d.settings.templateSeams, 5: 0 };
     d.settings.tplVersion = 2;
   }
+  if (tplV < 3) d.settings.tplVersion = 3;
   d.progress ??= {};
   d.name ??= 'My quilt';
   return d;

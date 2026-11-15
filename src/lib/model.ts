@@ -47,7 +47,7 @@ export const DEFAULT_SETTINGS: Settings = {
   seam: 0.25, wof: 42, binding: 'binding', bindingWidth: 0.375, seams: true,
   anchor: null, hst: 'trim', templates: [1, 2, 3, 4, 5, 6, 9], finishedTemplates: [1, 5],
   templateSeams: { 1: 0, 2: 0.25, 3: 0.25, 4: 0.25, 5: 0, 6: 0.25, 9: 0.25 },
-  tplVersion: 2,
+  tplVersion: 3,
 };
 export interface Doc {
   v: 3; root: string; fabrics: Fabric[]; blocks: Record<string, Block>; settings: Settings;
