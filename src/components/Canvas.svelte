@@ -1,7 +1,7 @@
 <script lang="ts">
     import Node from './Node.svelte';
   import Ruler from './Ruler.svelte';
-  import { app, scope, scopeId, begin, edit, save, enter } from '../lib/store.svelte';
+  import { app, scope, scopeId, begin, edit, save, enter, ui } from '../lib/store.svelte';
   import { getRegion, setRegion, snap, symTargets, uses, xformN, xformRegion, sum } from '../lib/model';
 
   const b = $derived(scope());
@@ -23,7 +23,8 @@
     };
   }
 
-  function say(msg: string) { flash = msg; setTimeout(() => (flash = ''), 2200); }
+  // no words: a little shake says "can't do that"
+  function say(_msg: string) { flash = 'no'; setTimeout(() => (flash = ''), 450); }
 
   function paintAt(idx: number) {
     const br = app.brush;
@@ -39,7 +40,6 @@
         def.cells[t.i].c = setRegion(c, xformRegion(c, h.r, t.ts), app.fabric);
       }
     });
-    if (h.def !== scopeId()) say(`Recoloured inside “${def.name}”: every copy changes.`);
   }
 
   function down(e: PointerEvent) {
@@ -51,6 +51,7 @@
       return;
     }
     if (app.tool === 'recolor') { if (h.inner) recolor(h.inner); return; }
+    if (app.tool === 'measure') { ui.measure = h.inner ? { def: h.inner.def, i: h.inner.i, x: e.clientX, y: e.clientY } : null; return; }
     if (h.idx < 0) { app.sel = []; return; }
     if (app.tool === 'paint') {
       begin(); painting = true; last = h.idx; paintAt(h.idx);
@@ -77,7 +78,7 @@
   }
 </script>
 
-<div class="stage" class:seams={app.doc.settings.seams} data-tool={app.tool}
+<div class="stage" class:shake={flash === 'no'} class:seams={app.doc.settings.seams} data-tool={app.tool}
   onpointerdown={down} onpointermove={move} onpointerup={up} ondblclick={dbl} role="application">
   <div class="frame" style:--cw={W} style:--ch={H} style:--bw={bw}>
     <Ruler block={b} axis="col" />
@@ -87,18 +88,19 @@
       <Node id={scopeId()} scope sel={app.sel} />
     </div>
   </div>
-  {#if flash}<div class="flash">{flash}</div>{/if}
 </div>
 
 <style>
   .stage {
     grid-area: stage; container-type: size; position: relative; display: grid; place-items: center;
     background:
-      radial-gradient(circle at 1px 1px, var(--line) 1px, transparent 0) 0 0 / 18px 18px,
-      var(--sunk);
+      radial-gradient(circle at 1px 1px, var(--line) 1.2px, transparent 0) 0 0 / 22px 22px,
+      var(--bg);
     user-select: none; touch-action: none;
     &[data-tool=paint] { cursor: crosshair; }
     &[data-tool=recolor] { cursor: cell; }
+    &[data-tool=measure] { cursor: help; }
+    &.shake .quilt { animation: shake .4s var(--ease); }
   }
   .frame {
     --ppi: min((100cqw - 120px) / (var(--cw) + 2 * var(--bw)), (100cqh - 110px) / (var(--ch) + 2 * var(--bw)));
@@ -108,12 +110,7 @@
     gap: calc(var(--bw) * var(--ppi) + 8px);
     view-transition-name: canvas;
   }
-  .quilt { grid-area: q; position: relative; box-shadow: 0 10px 40px oklch(0% 0 0 / 20%); }
+  .quilt { grid-area: q; position: relative; box-shadow: 0 2px 4px oklch(30% 0.04 50 / 10%), 0 16px 48px oklch(30% 0.04 50 / 18%); }
   .binding { position: absolute; inset: calc(-1 * var(--bw) * var(--ppi)); }
-  .flash {
-    position: absolute; bottom: 16px; left: 50%; translate: -50%; padding: 6px 12px; border-radius: 99px;
-    background: var(--ink); color: var(--bg); font-size: 12.5px; pointer-events: none;
-    animation: pop .2s var(--ease);
-  }
-  @keyframes pop { from { opacity: 0; translate: -50% 6px; } }
+  @keyframes shake { 20%, 60% { translate: -6px; } 40%, 80% { translate: 6px; } }
 </style>

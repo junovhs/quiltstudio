@@ -1,15 +1,16 @@
 import { flushSync } from 'svelte';
-import { defaultDoc, setSnapshot, type Content, type Doc, type Sym } from './model';
+import { analyse, fitToAnchor } from './calc';
+import { DEFAULT_SETTINGS, defaultDoc, setSnapshot, type Content, type Doc, type Sym } from './model';
 
 setSnapshot(v => $state.snapshot(v) as typeof v);
 
-export type Tool = 'select' | 'paint' | 'recolor';
+export type Tool = 'select' | 'paint' | 'recolor' | 'measure';
 const KEY = 'quiltstudio.v3';
 
 function loadDoc(): Doc {
   try {
     const d = JSON.parse(localStorage.getItem(KEY) ?? 'null');
-    if (d?.v === 3) return d;
+    if (d?.v === 3) { d.settings = { ...DEFAULT_SETTINGS, ...d.settings }; return d; }
   } catch {}
   return defaultDoc();
 }
@@ -68,6 +69,7 @@ function fixScope() {
 /* ---------------- persistence ---------------- */
 let t: ReturnType<typeof setTimeout>;
 export function save() {
+  fitToAnchor(app.doc);
   clearTimeout(t);
   t = setTimeout(() => { try { localStorage.setItem(KEY, snapshot()); } catch {} }, 250);
 }
@@ -115,3 +117,12 @@ function transition(fn: () => void) {
 export function enter(id: string) { transition(() => { app.path = [...app.path, id]; app.sel = []; }); }
 export function goTo(depth: number) { transition(() => { app.path = app.path.slice(0, depth); app.sel = []; }); }
 export function openBlock(id: string) { transition(() => { app.path = id === app.doc.root ? [] : [id]; app.sel = []; }); }
+
+/* ---------------- live numbers (computed once per change, shared) ---------------- */
+const analysis = $derived(analyse(app.doc));
+export const stats = () => analysis;
+/** how many times each block appears in the whole quilt */
+export const useCount = (id: string) => analysis.uses.filter(u => u.id === id).reduce((n, u) => n + u.qty, 0);
+
+/* the Make sheet + drawer state */
+export const ui = $state({ make: false, measure: null as null | { def: string; i: number; x: number; y: number } });

@@ -1,34 +1,40 @@
 <script lang="ts">
-  import { fmt } from '../lib/calc';
-  import { begin, edit, save } from '../lib/store.svelte';
+  import { fade } from 'svelte/transition';
+  import { Plus, X } from '@lucide/svelte';
+  import { fmt, scaleOf } from '../lib/calc';
+  import { app, begin, edit, save } from '../lib/store.svelte';
   import { insertTrack, deleteTrack, type Block } from '../lib/model';
 
   let { block, axis }: { block: Block; axis: 'col' | 'row' } = $props();
   const tracks = $derived(axis === 'col' ? block.cols : block.rows);
   const total = $derived(tracks.reduce((a, b) => a + b, 0));
+  // numbers are real quilt inches, shown only when measuring
+  const k = $derived.by(() => { const s = scaleOf(app.doc, block.id); return s ? (axis === 'col' ? s.sx : s.sy) : 1; });
+  const showNums = $derived(app.tool === 'measure');
   let el: HTMLDivElement;
-
-  const snap = (v: number) => Math.max(0.125, Math.round(v * 8) / 8);
 
   function setTrack(i: number, v: number) {
     if (!(v > 0)) return;
-    edit(() => { tracks[i] = snap(v); });
+    edit(() => { tracks[i] = v / k; });
   }
 
-  // drag the line between track i and i+1; the two trade size, the total stays put
+  // drag the line between two tracks: they trade size, the block keeps its size
   function drag(e: PointerEvent, i: number) {
     e.preventDefault();
-    (e.target as Element).setPointerCapture(e.pointerId);
     const len = axis === 'col' ? el.clientWidth : el.clientHeight;
-    const perIn = len / total, start = axis === 'col' ? e.clientX : e.clientY;
-    const a0 = tracks[i], b0 = tracks[i + 1];
+    const perUnit = len / total, start = axis === 'col' ? e.clientX : e.clientY;
+    const a0 = tracks[i], b0 = tracks[i + 1], step = 0.125 / k;
     begin();
+    document.body.classList.add('dragging');
     const move = (m: PointerEvent) => {
-      const d = ((axis === 'col' ? m.clientX : m.clientY) - start) / perIn;
-      const a = Math.min(snap(a0 + d), a0 + b0 - 0.125);
+      const d = ((axis === 'col' ? m.clientX : m.clientY) - start) / perUnit;
+      const a = Math.min(Math.max(step, Math.round((a0 + d) / step) * step), a0 + b0 - step);
       tracks[i] = a; tracks[i + 1] = a0 + b0 - a;
     };
-    const up = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', up); save(); };
+    const up = () => {
+      removeEventListener('pointermove', move); removeEventListener('pointerup', up);
+      document.body.classList.remove('dragging'); save();
+    };
     addEventListener('pointermove', move); addEventListener('pointerup', up);
   }
 </script>
@@ -38,50 +44,42 @@
   style:grid-template-rows={axis === 'row' ? tracks.map(v => v + 'fr').join(' ') : null}>
   {#each tracks as t, i}
     <div class="track">
-      <input type="number" step="0.125" value={t} title={fmt(t)}
-        onchange={e => setTrack(i, parseFloat(e.currentTarget.value))} />
-      <span class="tools">
-        <button class="ghost" title="Insert {axis === 'col' ? 'column' : 'row'} after" onclick={() => edit(() => insertTrack(block, axis, i + 1, t))}>+</button>
-        {#if tracks.length > 1}
-          <button class="ghost" title="Delete {axis === 'col' ? 'column' : 'row'}" onclick={() => edit(() => deleteTrack(block, axis, i))}>×</button>
-        {/if}
-      </span>
-      {#if i < tracks.length - 1}
-        <span class="handle" role="separator" onpointerdown={e => drag(e, i)}></span>
+      <span class="tick"></span>
+      {#if showNums}
+        <input type="text" inputmode="decimal" value={fmt(t * k, '')} transition:fade={{ duration: 150 }}
+          onchange={e => setTrack(i, parseFloat(e.currentTarget.value.replace(',', '.')))} />
       {/if}
+      <span class="tools">
+        <button title="Add" onclick={() => edit(() => insertTrack(block, axis, i + 1, t))}><Plus size={12} strokeWidth={2.5} /></button>
+        {#if tracks.length > 1}<button title="Remove" onclick={() => edit(() => deleteTrack(block, axis, i))}><X size={12} strokeWidth={2.5} /></button>{/if}
+      </span>
+      {#if i < tracks.length - 1}<span class="handle" role="separator" onpointerdown={e => drag(e, i)}></span>{/if}
     </div>
   {/each}
 </div>
 
 <style>
-  .ruler { display: grid; position: relative; }
+  .ruler { display: grid; position: relative; transition: grid-template-columns .45s var(--spring), grid-template-rows .45s var(--spring); :global(.dragging) & { transition: none; } }
   .ruler.col { grid-area: top; height: 26px; }
-  .ruler.row { grid-area: left; width: 30px; }
-  .track {
-    position: relative; display: grid; place-items: center; min-width: 0; min-height: 0;
-    color: var(--muted);
-    .col & { border-inline: 1px solid transparent; border-bottom: 1px solid var(--line); }
-    .row & { border-right: 1px solid var(--line); }
-    &:hover { color: var(--ink); background: var(--accent-soft); border-radius: 4px; }
-  }
-  input { border: 0; background: transparent; padding: 0 2px; font-size: 11px; color: inherit; max-width: 100%;
-    .row & { writing-mode: vertical-rl; rotate: 180deg; padding: 2px 0; }
-    &:focus { background: var(--panel); }
-  }
-  .tools {
-    position: absolute; display: none; gap: 1px;
-    .col & { top: -20px; }
-    .row & { left: -24px; flex-direction: column; }
-    .track:hover & { display: flex; }
-    button { padding: 0 5px; line-height: 16px; font-size: 13px; }
-  }
-  .handle {
-    position: absolute; z-index: 2; touch-action: none;
-    .col & { right: -5px; top: 0; bottom: -8px; width: 10px; cursor: col-resize; }
-    .row & { bottom: -5px; left: 0; right: -8px; height: 10px; cursor: row-resize; }
-    &::after { content: ''; position: absolute; background: var(--accent); opacity: 0; transition: opacity .12s; }
-    .col &::after { left: 4px; width: 2px; top: 0; bottom: 0; }
-    .row &::after { top: 4px; height: 2px; left: 0; right: 0; }
-    &:hover::after { opacity: 1; }
-  }
+  .ruler.row { grid-area: left; width: 26px; }
+  .track { position: relative; display: grid; place-items: center; min-width: 0; min-height: 0; color: var(--muted); border-radius: 6px; transition: background .2s;
+    &:hover { background: var(--accent-soft); color: var(--ink); } }
+  .tick { position: absolute; background: var(--line); border-radius: 2px;
+    .col & { left: 3px; right: 3px; bottom: 2px; height: 3px; }
+    .row & { top: 3px; bottom: 3px; right: 2px; width: 3px; }
+    .track:hover & { background: var(--accent); } }
+  input { width: 5ch; field-sizing: fixed; border: 0; background: transparent; text-align: center; font-size: 11.5px; font-weight: 650; color: inherit; padding: 0;
+    .row & { writing-mode: vertical-rl; rotate: 180deg; width: auto; height: 5ch; }
+    &:focus { background: var(--panel); outline: 2px solid var(--accent); border-radius: 4px; } }
+  .tools { position: absolute; display: flex; gap: 2px; opacity: 0; scale: .7; pointer-events: none; transition: opacity .2s, scale .3s var(--spring);
+    .col & { top: -24px; } .row & { left: -28px; flex-direction: column; }
+    .track:hover & { opacity: 1; scale: 1; pointer-events: auto; }
+    button { width: 20px; height: 20px; padding: 0; display: grid; place-items: center; border-radius: 6px; border: 0; background: var(--panel); box-shadow: var(--shadow); } }
+  .handle { position: absolute; z-index: 2; touch-action: none;
+    .col & { right: -6px; top: -4px; bottom: -10px; width: 12px; cursor: col-resize; }
+    .row & { bottom: -6px; left: -4px; right: -10px; height: 12px; cursor: row-resize; }
+    &::after { content: ''; position: absolute; background: var(--accent); border-radius: 2px; scale: 1 0; transition: scale .3s var(--spring); }
+    .col &::after { left: 5px; width: 2px; top: 0; bottom: 0; }
+    .row &::after { top: 5px; height: 2px; left: 0; right: 0; scale: 0 1; }
+    &:hover::after { scale: 1; } }
 </style>

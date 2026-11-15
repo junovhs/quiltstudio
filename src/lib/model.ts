@@ -27,7 +27,20 @@ export type Kind = Content['k'];
 export interface Cell { x: number; y: number; cs: number; rs: number; c: Content }
 export interface Block { id: string; name: string; cols: number[]; rows: number[]; cells: Cell[] }
 export interface Fabric { id: string; name: string; color: string; tile: number; image?: boolean }
-export interface Settings { seam: number; wof: number; binding: string | null; bindingWidth: number; seams: boolean }
+/** the piece everything is sized from: e.g. "this checker square is my 1½″ template" */
+export interface Anchor { def: string; i: number; size: number }
+export interface Settings {
+  seam: number; wof: number; binding: string | null; bindingWidth: number; seams: boolean;
+  anchor: Anchor | null;
+  /** HSTs: cut big and trim down (default), or cut exact (+⅞″) */
+  hst: 'trim' | 'exact';
+  /** square templates/rulers the quilter owns, finished inches */
+  templates: number[];
+}
+export const DEFAULT_SETTINGS: Settings = {
+  seam: 0.25, wof: 42, binding: 'binding', bindingWidth: 0.375, seams: true,
+  anchor: null, hst: 'trim', templates: [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 6],
+};
 export interface Doc { v: 3; root: string; fabrics: Fabric[]; blocks: Record<string, Block>; settings: Settings }
 
 export const uid = (p = 'b') => p + Math.random().toString(36).slice(2, 8);
@@ -317,6 +330,6 @@ export function defaultDoc(): Doc {
       { id: 'binding', name: 'Checker binding', color: '#3a3a3a', tile: 2 },
     ],
     blocks: Object.fromEntries(blocks.map(b => [b.id, b])),
-    settings: { seam: 0.25, wof: 42, binding: 'binding', bindingWidth: 0.375, seams: true },
+    settings: { ...DEFAULT_SETTINGS, templates: [...DEFAULT_SETTINGS.templates], anchor: { def: 'nine', i: 0, size: 1.5 } },
   };
 }
