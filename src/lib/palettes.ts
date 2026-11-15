@@ -15,6 +15,8 @@ export const PALETTES: Palette[] = [
   { id: 'blush', name: 'Blush & Sage', colors: [['Ivory', '#fbf4ef'], ['Blush', '#f2c9c0'], ['Rose', '#d98f86'], ['Sage', '#9db49c'], ['Forest', '#4d5d4a']] },
   { id: 'ocean', name: 'Seaside', colors: [['Sea foam', '#f1f7f8'], ['Aqua', '#a8dadc'], ['Harbor', '#457b9d'], ['Navy', '#1d3557'], ['Buoy red', '#e63946']] },
   { id: 'brights', name: 'Brights', colors: [['White', '#ffffff'], ['Sunshine', '#ffcf3d'], ['Watermelon', '#ff6b6b'], ['Jade', '#3fb6a8'], ['Ink', '#3b3b98']] },
+  { id: 'mono', name: 'Monochrome', colors: [['White', '#f7f7f5'], ['Silver', '#cfcfcc'], ['Grey', '#8a8a87'], ['Charcoal', '#3d3d3b'], ['Black', '#111111']] },
+  { id: 'candy', name: 'Candy', colors: [['Cream', '#f6f1e4'], ['Bubblegum', '#f4a7c7'], ['Lilac', '#c9b3e6'], ['Tangerine', '#f39a3c'], ['Lemon', '#f4d35e'], ['Kelly', '#1f9e6e'], ['Cobalt', '#3a52c4'], ['Liquorice', '#222222']] },
   { id: 'sunflower', name: 'Sunflower', colors: [['Butter', '#fffbea'], ['Sunflower', '#ffd23f'], ['Apricot', '#f4a261'], ['Bark', '#6b4f2a'], ['Deep teal', '#264653']] },
 ];
 

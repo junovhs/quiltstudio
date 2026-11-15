@@ -4,7 +4,8 @@
 import { xform, type Block, type Cell, type Content, type Corner, type Dir, type Doc } from './model';
 
 export type Role = 'L' | 'M' | 'D';
-export type Roles = Record<Role, string>;
+/** light, medium, dark — plus an optional accent (falls back to the medium) */
+export type Roles = Record<Role, string> & { A?: string };
 export interface Preset { id: string; name: string; build: (r: Roles) => Pick<Block, 'cols' | 'rows' | 'cells'> }
 
 /* ---------- tiny builders ---------- */
@@ -116,6 +117,20 @@ export const PRESETS: Preset[] = [
       return { cols: even(7), rows: even(7), cells: [...cells, C(3, 3, S(M))] };
     },
   },
+  // a square casting a 45° drop shadow: dark down the right, the accent along the bottom
+  {
+    id: 'shadow', name: 'Shadow Box', build: ({ L, M, D, A = M }) => ({
+      cols: even(3), rows: even(3),
+      cells: [C(0, 0, S(M), 2, 2), C(2, 0, H(D, L, 'bl')), C(2, 1, S(D)), C(0, 2, H(A, L, 'tr')), C(1, 2, S(A)), C(2, 2, H(D, A, 'tr'))],
+    }),
+  },
+  // a window with two sills that meet at a mitred corner
+  {
+    id: 'attic', name: 'Attic Window', build: ({ M, D, A = M, L }) => ({
+      cols: [2, 1], rows: [2, 1],
+      cells: [C(0, 0, S(A === M ? L : M)), C(1, 0, S(D)), C(0, 1, S(A)), C(1, 1, H(D, A, 'tr'))],
+    }),
+  },
   { id: 'sis', name: 'Square in a Square', build: ({ L, D }) => ({ cols: [1], rows: [1], cells: [C(0, 0, { k: 'sis', c: D, o: L })] }) },
   // three-triangle squares turning round a centre point
   {
@@ -142,6 +157,7 @@ export function rolesFor(doc: Doc): Roles {
   const L = pool[0]?.id ?? 'cream', D = pool.at(-1)?.id ?? L;
   const mid = pool.slice(1, -1);
   // the most colourful fabric in between (usually the print the quilt is about)
-  const M = mid.sort((a, b) => b.sat - a.sat)[0]?.id ?? D;
-  return { L, M, D };
+  const byColour = mid.sort((a, b) => b.sat - a.sat);
+  const M = byColour[0]?.id ?? D;
+  return { L, M, D, A: byColour[1]?.id };
 }

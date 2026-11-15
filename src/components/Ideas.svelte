@@ -15,8 +15,8 @@
   $effect(() => { try { localStorage.setItem(KEY, JSON.stringify(steer)); } catch {} });
   const S = () => $state.snapshot(steer) as Steer;
   const GROUPS = [
-    ['look', 'Blocks', [['classic', 'Classic'], ['mixed', 'Mixed'], ['new', 'Invented']]],
-    ['layout', 'Layout', [['any', 'Any'], ['grid', 'Blocks'], ['alternate', 'Alternating'], ['sashing', 'Sashing'], ['two', 'Two-block'], ['medallion', 'Medallion']]],
+    ['look', 'Style', [['classic', 'Classic'], ['mixed', 'Mixed'], ['new', 'Invented'], ['modern', 'Modern']]],
+    ['layout', 'Layout', [['any', 'Any'], ['grid', 'Blocks'], ['alternate', 'Alternating'], ['sashing', 'Sashing'], ['two', 'Two-block'], ['medallion', 'Medallion'], ['bars', 'Bars']]],
     ['feel', 'Feel', [['calm', 'Calm'], ['balanced', 'Balanced'], ['bold', 'Bold']]],
     ['size', 'Size', [['baby', 'Baby'], ['throw', 'Throw'], ['bed', 'Bed']]],
   ] as const;
@@ -93,7 +93,7 @@
     } finally { busy = false; }
   }
   const close = () => (ui.ideas = false);
-  const LAYOUT: Record<Idea['layout'], string> = { grid: 'blocks', alternate: 'alternating', sashing: 'sashing', two: 'two-block', medallion: 'medallion' };
+  const LAYOUT: Record<Idea['layout'], string> = { grid: 'blocks', alternate: 'alternating', sashing: 'sashing', two: 'two-block', medallion: 'medallion', bars: 'colour bars' };
   const BORDER: Record<string, string> = { sawtooth: 'sawtooth', geese: 'geese', hourglass: 'hourglass', checker: 'checkerboard', piano: 'piano keys', blocks: 'block' };
   const pieced = (i: Idea) => [...new Set(i.borders.filter(b => b.kind !== 'plain').map(b => BORDER[b.kind]))].join(', ');
 
