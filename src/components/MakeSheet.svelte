@@ -44,6 +44,8 @@
     </header>
 
     <div class="body">
+      <button class="adaptive-entry" onclick={() => { ui.make = false; ui.made = true; }}>Made a piece? Plan the next strip →</button>
+      {#if app.doc.measurements?.length}<p class="plan-reference">This is the full design reference, including pieces already measured and made. Use the next-strip helper to plan your next batch.</p>{/if}
       <!-- 1 · fabric to buy -->
       <section class="buy">
         {#each a.yardage as y, i}

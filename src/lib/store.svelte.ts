@@ -2,6 +2,7 @@ import { flushSync } from 'svelte';
 import { analyse, fitToAnchor } from './calc';
 import { thumbnail } from './render';
 import { DEFAULT_SETTINGS, defaultDoc, setSnapshot, uid, type Content, type Doc, type Sym } from './model';
+import { madeChangeError } from './planning';
 
 setSnapshot(v => $state.snapshot(v) as typeof v);
 
@@ -105,19 +106,19 @@ export function begin() {
 export function rollback() {
   if (!past.length) return;
   app.doc = JSON.parse(past.pop()!);
-  fixScope(); sync(); save();
+  fixScope(); sync(); save(false);
 }
 export function undo() {
   if (!past.length) return;
   future.push(snapshot());
   app.doc = JSON.parse(past.pop()!);
-  fixScope(); sync(); save();
+  fixScope(); sync(); save(false);
 }
 export function redo() {
   if (!future.length) return;
   past.push(snapshot());
   app.doc = JSON.parse(future.pop()!);
-  fixScope(); sync(); save();
+  fixScope(); sync(); save(false);
 }
 function fixScope() {
   app.path = app.path.filter(id => app.doc.blocks[id]);
@@ -126,8 +127,13 @@ function fixScope() {
 
 /* ---------------- persistence ---------------- */
 let t: ReturnType<typeof setTimeout>;
-export function save() {
+export function save(validateMade = true) {
   fitToAnchor(app.doc);
+  if (validateMade && past.length && app.doc.measurements?.length) {
+    const before = JSON.parse(past.at(-1)!) as Doc;
+    const message = madeChangeError(before, $state.snapshot(app.doc) as Doc);
+    if (message) { app.doc = before; past.pop(); sync(); fixScope(); ui.notice = message; }
+  }
   clearTimeout(t);
   t = setTimeout(persist, 300);
 }
@@ -252,7 +258,7 @@ export const stats = () => analysis;
 export const useCount = (id: string) => analysis.uses.filter(u => u.id === id).reduce((n, u) => n + u.qty, 0);
 
 /* the Make sheet + drawer state */
-export const ui = $state({ make: false, projects: false, account: false, classics: false, ideas: false, palette: false, sizes: false, glow: [] as { def: string; i: number }[], print: null as null | string[], measure: null as null | { def: string; i: number; x: number; y: number } });
+export const ui = $state({ notice: '', resize: false, camera: false, made: false, cameraResult: null as null | { w: number; h: number }, make: false, projects: false, account: false, classics: false, ideas: false, palette: false, sizes: false, glow: [] as { def: string; i: number }[], print: null as null | string[], measure: null as null | { def: string; i: number; x: number; y: number } });
 
 /** tick a Make-sheet item done / not done */
 export function toggleDone(key: string) {

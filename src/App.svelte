@@ -2,7 +2,11 @@
   import { onMount } from 'svelte';
   import { scale } from 'svelte/transition';
   import { backOut } from 'svelte/easing';
-  import { Undo2, Redo2, Scissors, Settings, House, ChevronRight, Grid3x3, Ban, FolderOpen, Printer, Wand2, TriangleAlert, Lock, LockOpen, Dices } from '@lucide/svelte';
+  import { Undo2, Redo2, Scissors, Settings, House, ChevronRight, Grid3x3, Ban, FolderOpen, Printer, Wand2, TriangleAlert, Lock, LockOpen, Dices, Camera, Ruler as RulerIcon } from '@lucide/svelte';
+  import QuiltSize from './components/QuiltSize.svelte';
+  import CameraMeasure from './components/CameraMeasure.svelte';
+  import MadePiece from './components/MadePiece.svelte';
+  import { installViewport } from './lib/viewport';
   import Canvas from './components/Canvas.svelte';
   import Palette from './components/Palette.svelte';
   import Swatches from './components/Swatches.svelte';
@@ -32,23 +36,14 @@
     return `.f-${f.id}{background-color:${f.color};${img ? `background-image:url(${img});background-size:calc(${f.tile} * var(--ppi)) auto;` : ''}}`;
   }).join('\n'));
 
-  onMount(() => { loadImages(); });
-  const hereLocked = $derived(app.path.length ? !!app.doc.blocks[app.path.at(-1)!]?.locked : app.doc.settings.lockQuilt !== false);
+  onMount(() => { loadImages(); return installViewport(); });
+  const hereLocked = $derived(app.doc.settings.lockQuilt !== false);
   function toggleHereLock() {
     edit(() => {
-      const id = app.path.at(-1);
-      if (id) app.doc.blocks[id].locked = !app.doc.blocks[id].locked;
-      else app.doc.settings.lockQuilt = app.doc.settings.lockQuilt === false;
+      app.doc.settings.lockQuilt = app.doc.settings.lockQuilt === false;
     });
   }
   const oddCount = $derived(pieces(app.doc).filter(p => p.status === 'odd' || p.status === 'near').length);
-  // finished size of whatever we're looking at: the quilt, or the block we've opened
-  const here = $derived.by(() => {
-    const a = stats(), id = app.path.at(-1);
-    if (!id) return a.size;
-    const u = a.uses.find(u => u.id === id), b = app.doc.blocks[id];
-    return u ? { w: u.w, h: u.h } : { w: b.cols.reduce((s, v) => s + v, 0), h: b.rows.reduce((s, v) => s + v, 0) };
-  });
 
   function xfSel(t: Xf) {
     const b = scope();
@@ -57,6 +52,7 @@
   }
 
   function key(e: KeyboardEvent) {
+    if (ui.resize || ui.camera || ui.made) return;
     if ((e.target as HTMLElement).closest('input, select, textarea')) return;
     const mod = e.metaKey || e.ctrlKey, k = e.key.toLowerCase();
     if (mod && k === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
@@ -98,11 +94,11 @@
         </button>
       {/each}
     </nav>
-    <!-- the size of what you're looking at; tap the padlock to lock it (quilt: corrections come out of the border) -->
-    <button class="where" class:locked={hereLocked} title={hereLocked ? 'Size locked — tap to let it change' : 'Tap to lock this size'} onclick={toggleHereLock}>
-      {fmt(here.w, '')} × {fmt(here.h)}
-      {#if hereLocked}<Lock size={14} strokeWidth={2.6} />{:else}<LockOpen size={14} strokeWidth={2.2} />{/if}
+    <!-- Whole-quilt sizing stays available even while editing a nested block. -->
+    <button class="where" title="Set quilt size" onclick={() => ui.resize = true}>
+      {fmt(stats().size.w, '')} × {fmt(stats().size.h)}
     </button>
+    <button class="icon size-lock" class:on={hereLocked} aria-label={hereLocked ? 'Let this size change' : 'Hold this size exact'} title={hereLocked ? 'Let this size change' : 'Hold this size exact'} onclick={toggleHereLock}>{#if hereLocked}<Lock size={16} />{:else}<LockOpen size={16} />{/if}</button>
     <div class="spacer"></div>
     <button class="ideasbtn" onclick={() => (ui.ideas = true)} title="Random quilt: generate quilts from your fabrics"><Dices size={17} /><span>Random quilt</span></button>
     <button class="icon" disabled={!app.canUndo} onclick={undo} title="Undo"><Undo2 size={19} /></button>
@@ -114,6 +110,7 @@
     <button class="icon" popovertarget="tidy" title="Tidy sizes: snap to normal sizes"><Wand2 size={19} /></button>
     <button class="icon" title="Print blocks" onclick={() => (ui.print = app.path.length ? [app.path.at(-1)!] : [app.doc.root, ...stats().order])}><Printer size={19} /></button>
     <button class="icon" popovertarget="settings" title="Settings"><Settings size={19} /></button>
+    <button class="icon camerabtn" title="Measure with camera" aria-label="Measure with camera" onclick={() => ui.camera = true}><Camera size={20} /></button>
     <button class="make" onclick={() => (ui.make = true)} title="What to cut and sew">
       <Scissors size={18} />
       <span class="dots">{#each stats().yardage.slice(0, 6) as y}<i class="f-{y.f}"></i>{/each}</span>
@@ -138,11 +135,17 @@
 <DragGhost />
 <Tidy />
 <Picker />
+<QuiltSize />
+{#if ui.camera}<CameraMeasure />{/if}
+{#if ui.made}<MadePiece />{/if}
+{#if ui.notice}<div class="plan-notice" role="alert">{ui.notice}<button onclick={() => ui.notice = ''}>Dismiss</button></div>{/if}
 
 <div popover id="settings">
   <div class="settings">
+    <button onclick={() => { document.getElementById('settings')?.hidePopover(); ui.resize = true; }}><RulerIcon size={16} /> Quilt size · {fmt(stats().size.w, '')} × {fmt(stats().size.h)}</button>
+    <button onclick={() => { document.getElementById('settings')?.hidePopover(); ui.made = true; }}>Made piece → next strip</button>
     <label title="Seam allowance"><span class="glyph seam"></span><span class="lbl">seam</span><input type="text" inputmode="decimal" value={fmt(app.doc.settings.seam, '')} onchange={e => edit(() => (app.doc.settings.seam = parseFloat(e.currentTarget.value) || 0.25))} />″</label>
-    <label title="Usable fabric width"><span class="glyph wof"></span><span class="lbl">fabric width</span><input type="text" inputmode="decimal" value={app.doc.settings.wof} onchange={e => edit(() => (app.doc.settings.wof = parseFloat(e.currentTarget.value) || 42))} />″</label>
+    <label title="Width across the fabric roll, used for yardage estimates"><span class="glyph wof"></span><span class="lbl">fabric roll width</span><input type="text" inputmode="decimal" value={app.doc.settings.wof} onchange={e => edit(() => (app.doc.settings.wof = parseFloat(e.currentTarget.value) || 42))} />″</label>
     <label title="Binding strip width (what you bought)"><span class="glyph bindg"></span><span class="lbl">binding strip</span><input type="text" inputmode="decimal" value={fmt(app.doc.settings.bindingStrip ?? 2, '')} onchange={e => edit(() => (app.doc.settings.bindingStrip = parseFloat(e.currentTarget.value) || 2))} />″</label>
     <label title="How much binding shows on the front"><span class="glyph bindg"></span><span class="lbl">shows on front</span><input type="text" inputmode="decimal" value={fmt(app.doc.settings.bindingWidth, '')} onchange={e => edit(() => (app.doc.settings.bindingWidth = parseFloat(e.currentTarget.value.replace('½', '.5').replace('¼', '.25').replace('⅜', '.375')) || 0.375))} />″</label>
     <div class="bind" title="Binding fabric (drawn around the quilt)">
@@ -162,7 +165,7 @@
 
 <style>
   .app {
-    height: 100dvh; display: grid;
+    height: var(--app-height, 100dvh); display: grid;
     grid-template: "top top top top" 56px "dock palette stage swatches" 1fr / 56px 232px 1fr 72px;
   }
   .top { grid-area: top; display: flex; align-items: center; gap: 4px; padding: 0 12px 0 14px; border-bottom: 1px solid var(--line); background: var(--panel); min-width: 0; }
@@ -218,6 +221,18 @@
   .settings { display: grid; gap: 12px;
     label { display: flex; align-items: center; gap: 10px; font-weight: 600; }
     input[type=text] { width: 5ch; field-sizing: fixed; text-align: center; font-weight: 600; }
+  }
+  @media (width < 760px) {
+    .app { grid-template-rows: auto 1fr auto auto; }
+    .app.with-sizes { grid-template-rows: auto 1fr auto auto auto; }
+    .top { flex-wrap: wrap; gap: 3px; padding-top: max(6px, env(safe-area-inset-top)); padding-bottom: 6px; }
+    .top > button { flex-shrink: 0; min-height: 42px; }
+    .top .icon { width: 40px; }
+    .where { margin-left: 0; }
+    .top .proj { margin-right: 0; padding-right: 2px; }
+    .crumbs { flex-shrink: 0; max-width: 100%; }
+    .top .spacer { display: none; }
+    #settings { top: calc(104px + env(safe-area-inset-top)); max-height: calc(100dvh - 120px); overflow-y: auto; }
   }
   .glyph { width: 30px; height: 30px; border-radius: 7px; flex: none; position: relative; background: var(--sunk);
     &.seam::after { content: ''; position: absolute; inset: 6px; border: 2px dashed var(--muted); border-radius: 2px; }

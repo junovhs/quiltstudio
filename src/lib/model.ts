@@ -71,6 +71,8 @@ export interface Doc {
   name?: string;
   /** Make-sheet check marks: cut/unit/block key -> done */
   progress?: Record<string, boolean>;
+  /** Measurements of individual, already-made occurrences in the root layout. */
+  measurements?: import('./planning').MadeMeasurement[];
 }
 
 export const uid = (p = 'b') => p + Math.random().toString(36).slice(2, 8);

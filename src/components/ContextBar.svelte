@@ -1,7 +1,7 @@
 <script lang="ts">
   import { scale, fly } from 'svelte/transition';
   import { backOut } from 'svelte/easing';
-  import { RotateCw, FlipHorizontal2, FlipVertical2, Combine, Group, Grid2x2, Trash2, Maximize2, X, Printer, Scissors, Lock, LockOpen } from '@lucide/svelte';
+  import { RotateCw, FlipHorizontal2, FlipVertical2, Combine, Group, Grid2x2, Trash2, Maximize2, X, Printer, Scissors, Lock, LockOpen, Ruler } from '@lucide/svelte';
   import Tile from './Tile.svelte';
   import { app, edit, enter, scope, scopeId, ui, rollback, tryChange } from '../lib/store.svelte';
   import { pieces, whereIs, resizePiece, resizeCells, parseSize } from '../lib/sizes';
@@ -83,6 +83,7 @@
         <button class="icon" title="Back" onclick={() => (splitting = false)}><X size={16} /></button>
       </div>
     {:else}
+      {#if !app.path.length && sel.length === 1}<button class="icon" title="Record made size and plan next strip" aria-label="Record made size and plan next strip" onclick={() => ui.made = true}><Ruler size={19} /></button>{/if}
       {#if sz}
         <!-- finished size in inches, cut size underneath -->
         <!-- the finished size: tap it and type what it should be ("9" = 9×9, or "9 x 8") -->
