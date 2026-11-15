@@ -11,6 +11,7 @@
   import MakeSheet from './components/MakeSheet.svelte';
   import Projects from './components/Projects.svelte';
   import Account from './components/Account.svelte';
+  import Classics from './components/Classics.svelte';
   import { cloud } from './lib/cloud.svelte';
   import Print from './components/Print.svelte';
   import DragGhost from './components/DragGhost.svelte';
@@ -59,7 +60,7 @@
     const mod = e.metaKey || e.ctrlKey, k = e.key.toLowerCase();
     if (mod && k === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
     if (mod && k === 'y') { e.preventDefault(); redo(); return; }
-    if (mod || ui.make || ui.projects || ui.account || ui.print) return;
+    if (mod || ui.make || ui.projects || ui.account || ui.classics || ui.print) return;
     const b = scope();
     switch (k) {
       case 'v': app.tool = 'select'; break;
@@ -129,6 +130,7 @@
 <MakeSheet />
 <Projects />
 <Account />
+<Classics />
 <Print />
 <DragGhost />
 <Tidy />

@@ -2,7 +2,7 @@
   import { flip } from 'svelte/animate';
   import { scale } from 'svelte/transition';
   import { backOut } from 'svelte/easing';
-  import { MousePointer2, Paintbrush, PaintBucket, Ruler, Square, Columns2, Rows2, Grid2x2, RefreshCw, RotateCw, FlipHorizontal2, FlipVertical2, Plus, Pencil, Lock } from '@lucide/svelte';
+  import { MousePointer2, Paintbrush, PaintBucket, Ruler, Square, Columns2, Rows2, Grid2x2, RefreshCw, RotateCw, FlipHorizontal2, FlipVertical2, Plus, Pencil, Lock, BookOpen } from '@lucide/svelte';
   import Tile from './Tile.svelte';
   import Thumb from './Thumb.svelte';
   import { app, edit, openBlock, scopeId, useCount, ui, type Tool } from '../lib/store.svelte';
@@ -115,6 +115,7 @@
       </div>
     {/each}
     <button class="card add" title="New block" onclick={newBlock}><Plus size={22} /></button>
+    <button class="card add classic" title="Classic blocks" onclick={() => (ui.classics = true)}><BookOpen size={20} /><span>Classics</span></button>
   </div>
 </aside>
 
@@ -199,4 +200,5 @@
   }
   .lockb { position: absolute; left: -5px; bottom: -6px; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--ink); color: var(--panel); box-shadow: var(--shadow); }
   .add { border: 2px dashed var(--line); background: transparent; color: var(--muted); &:hover { color: var(--accent); border-color: var(--accent); } }
+  .classic { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 11.5px; font-weight: 700; }
 </style>
