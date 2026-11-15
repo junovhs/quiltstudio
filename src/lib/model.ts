@@ -34,12 +34,12 @@ export interface Settings {
   anchor: Anchor | null;
   /** HSTs: cut big and trim down (default), or cut exact (+⅞″) */
   hst: 'trim' | 'exact';
-  /** square templates/rulers the quilter owns, finished inches */
+  /** square templates the quilter owns: CUT sizes (seam allowance included) */
   templates: number[];
 }
 export const DEFAULT_SETTINGS: Settings = {
   seam: 0.25, wof: 42, binding: 'binding', bindingWidth: 0.375, seams: true,
-  anchor: null, hst: 'trim', templates: [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 6],
+  anchor: null, hst: 'trim', templates: [1, 2, 3, 4, 6, 9],
 };
 export interface Doc {
   v: 3; root: string; fabrics: Fabric[]; blocks: Record<string, Block>; settings: Settings;

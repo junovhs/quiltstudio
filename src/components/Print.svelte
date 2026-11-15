@@ -2,7 +2,7 @@
   import { fly, fade, scale } from 'svelte/transition';
   import { backOut, cubicOut } from 'svelte/easing';
   import { tick } from 'svelte';
-  import { Printer, X, Palette, PenLine, Ruler, House, Check } from '@lucide/svelte';
+  import { Printer, X, Palette, PenLine, Ruler, House, Check, Grid3x3 } from '@lucide/svelte';
   import Thumb from './Thumb.svelte';
   import { app, stats, ui, useCount } from '../lib/store.svelte';
   import { fmt } from '../lib/calc';
@@ -11,6 +11,11 @@
 
   let ink = $state(false);
   let actual = $state(true);
+  let grid = $state(true);
+  // cut-line colour + thickness: dark, greys, or a colour that shows on your fabrics
+  const LINES = ['#1d1612', '#6b625c', '#b9b2ac', '#d9603b', '#2b6fd6'];
+  let line = $state(LINES[0]);
+  let weight = $state(1);
   let printing = $state(false);
 
   // everything printable: the quilt, then every block in the order you'd make them
@@ -23,7 +28,7 @@
 
   const pages = $derived(chosen.map(id => ({
     id, n: count(id), size: realSize(app.doc, id),
-    d: blockDiagram($state.snapshot(app.doc), id, { ink, actual }),
+    d: blockDiagram($state.snapshot(app.doc), id, { ink, actual, grid, line, weight }),
     pieces: id === app.doc.root ? [] : piecesOf(app.doc, id),
   })));
 
@@ -49,9 +54,21 @@
         <button class:on={ink} title="Ink saver: pale colours, bold lines" onclick={() => (ink = true)}><PenLine size={17} /></button>
       </div>
       <button class="chip" class:on={actual} title="Print at real size when it fits on the page" onclick={() => (actual = !actual)}><Ruler size={16} /> 1:1</button>
+      <button class="chip" class:on={grid} title="Inch grid" onclick={() => (grid = !grid)}><Grid3x3 size={16} /></button>
       <span class="sp"></span>
       <button class="icon" onclick={close}><X size={18} /></button>
     </header>
+
+    <!-- cut lines: colour and thickness -->
+    <div class="lines">
+      {#each LINES as l}
+        <button class="ln" class:on={line === l} style:--l={l} title="Cut line colour" onclick={() => (line = l)}><i></i></button>
+      {/each}
+      <span class="sp"></span>
+      {#each [0.5, 1, 1.8] as w}
+        <button class="wt" class:on={weight === w} title="Line thickness" onclick={() => (weight = w)}><i style:height="{w * 2.5}px"></i></button>
+      {/each}
+    </div>
 
     <!-- pick what to print -->
     <div class="pick">
@@ -72,7 +89,7 @@
           <div class="ph"><span class="count big">{p.n}</span><span class="sz">{fmt(p.size.w, '')} × {fmt(p.size.h)}</span>{#if p.d.actual}<span class="one">1:1</span>{/if}</div>
           <div class="pd">{@html p.d.svg}</div>
           {#if p.pieces.length}
-            <div class="pp">{#each p.pieces as pc}<span>{@html pieceSvg(app.doc, pc.c, pc.w, pc.h, ink, 0.12)}<b class="count">{pc.n}</b></span>{/each}</div>
+            <div class="pp">{#each p.pieces as pc}<span>{@html pieceSvg(app.doc, pc.c, pc.w, pc.h, ink, 0.12, { line, weight })}<b class="count">{pc.n}</b></span>{/each}</div>
           {/if}
         </div>
       {/each}
@@ -92,7 +109,7 @@
         {#if p.pieces.length}
           <div class="pp">
             {#each p.pieces as pc}
-              <span>{@html pieceSvg(app.doc, pc.c, pc.w, pc.h, ink, 0.18)}<b class="count">{pc.n}</b><small>{fmt(pc.w, '')} × {fmt(pc.h)}</small></span>
+              <span>{@html pieceSvg(app.doc, pc.c, pc.w, pc.h, ink, 0.18, { line, weight })}<b class="count">{pc.n}</b><small>{fmt(pc.w, '')} × {fmt(pc.h)}</small></span>
             {/each}
           </div>
         {/if}
@@ -113,6 +130,11 @@
   .chip { display: flex; align-items: center; gap: 6px; height: 38px; border-radius: 11px; border: 0; background: var(--sunk); font-weight: 700;
     &.on { background: var(--accent-soft); color: var(--accent); } }
   .sp { flex: 1; }
+  .lines { display: flex; align-items: center; gap: 6px; padding: 0 18px 8px; flex: none; }
+  .ln, .wt { width: 34px; height: 30px; padding: 0; border: 0; border-radius: 9px; background: var(--sunk); display: grid; place-items: center;
+    &.on { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent); } }
+  .ln i { width: 20px; height: 4px; border-radius: 2px; background: var(--l); }
+  .wt i { width: 20px; border-radius: 2px; background: var(--ink); }
   .pick { display: flex; gap: 10px; overflow-x: auto; padding: 8px 18px 14px; scrollbar-width: none; flex: none; }
   .card { position: relative; flex: none; width: 72px; height: 72px; padding: 8px; border: 0; border-radius: 14px; background: var(--sunk); opacity: .55;
     transition: opacity .2s, box-shadow .25s, scale .35s var(--spring);

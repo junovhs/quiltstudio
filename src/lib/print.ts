@@ -4,7 +4,7 @@
 import { sum, type Block, type Content, type Doc } from './model';
 import { analyse, fmt } from './calc';
 
-export interface PrintOpts { ink: boolean; actual: boolean }
+export interface PrintOpts { ink: boolean; actual: boolean; grid?: boolean; line?: string; weight?: number }
 
 /* fabric colours → plain hex (fabric colours can be any CSS colour, e.g. oklch) */
 const hexCache = new Map<string, string>();
@@ -92,14 +92,15 @@ export function realSize(doc: Doc, id: string, a = analyse(doc)) {
   return u ? { w: u.w, h: u.h } : { w: sum(b.cols), h: sum(b.rows) };
 }
 
-const STYLE = `
-  .cut { fill: none; stroke: #1d1612; stroke-width: 1.1; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
-  .seam { fill: none; stroke: #1d1612; stroke-width: 2.2; vector-effect: non-scaling-stroke; }
-  .edge { fill: none; stroke: #1d1612; stroke-width: 3; vector-effect: non-scaling-stroke; }
+const style = (line = '#1d1612', w = 1) => `
+  .cut { fill: none; stroke: ${line}; stroke-width: ${1.1 * w}; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+  .seam { fill: none; stroke: ${line}; stroke-width: ${2.2 * w}; vector-effect: non-scaling-stroke; }
+  .edge { fill: none; stroke: ${line}; stroke-width: ${3 * w}; vector-effect: non-scaling-stroke; }
   .grid { stroke: #8a7b70; stroke-width: .5; vector-effect: non-scaling-stroke; opacity: .55; }
   .grid.major { stroke-width: .9; opacity: .7; }
   .dim { font-family: system-ui, sans-serif; font-weight: 650; fill: #3b2a20; text-anchor: middle; }
   .tick { stroke: #3b2a20; stroke-width: .8; vector-effect: non-scaling-stroke; }`;
+const STYLE = style();
 
 /**
  * One block as an SVG in real inches, with an inch grid around it and the size of
@@ -118,6 +119,7 @@ export function blockDiagram(doc: Doc, id: string, opts: PrintOpts, maxW = 7.2, 
 
   // inch grid across the whole drawing, every inch; heavier every 6″
   let grid = '';
+  const showGrid = opts.grid !== false;
   const step = w > 60 || h > 60 ? 2 : 1;
   for (let gx = 0; gx <= Math.ceil(w); gx += step) grid += `<line class="grid${gx % 6 === 0 ? ' major' : ''}" x1="${gx}" y1="${-pad * .5}" x2="${gx}" y2="${h + pad * .5}"/>`;
   for (let gy = 0; gy <= Math.ceil(h); gy += step) grid += `<line class="grid${gy % 6 === 0 ? ' major' : ''}" x1="${-pad * .5}" y1="${gy}" x2="${w + pad * .5}" y2="${gy}"/>`;
@@ -140,11 +142,11 @@ export function blockDiagram(doc: Doc, id: string, opts: PrintOpts, maxW = 7.2, 
 
   const body = drawBlock(doc, fill, id, 0, 0, w, h);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-pad} ${-pad} ${vw} ${vh}" width="${vw * scale}in" height="${vh * scale}in">
-<style>${STYLE}</style>
+<style>${style(opts.line, opts.weight)}</style>
 <rect x="${-pad}" y="${-pad}" width="${vw}" height="${vh}" fill="#fff"/>
-${grid}
+${showGrid ? grid : ''}
 <g>${body.shapes}</g>
-<g opacity=".35">${grid}</g>
+${showGrid ? `<g opacity=".35">${grid}</g>` : ''}
 <g>${body.cuts}</g>
 <rect class="edge" x="0" y="0" width="${w}" height="${h}"/>
 ${dims}
@@ -174,10 +176,10 @@ export function piecesOf(doc: Doc, id: string) {
 }
 
 /** a small picture of one piece or sub-block, at a given print scale (inches) */
-export function pieceSvg(doc: Doc, c: Content, w: number, h: number, ink: boolean, px = 0.22) {
+export function pieceSvg(doc: Doc, c: Content, w: number, h: number, ink: boolean, px = 0.22, o: Partial<PrintOpts> = {}) {
   const fill = fills(doc, ink);
   const body = c.k === 'inst' ? drawBlock(doc, fill, c.ref, 0, 0, w, h, 1) : piece(c, fill, 0, 0, w, h);
   const s = Math.min(px, 1.4 / Math.max(w, h));
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-0.05 -0.05 ${w + 0.1} ${h + 0.1}" width="${(w + 0.1) * s}in" height="${(h + 0.1) * s}in">
-<style>${STYLE}</style>${body.shapes}${body.cuts}<rect class="seam" x="0" y="0" width="${w}" height="${h}"/></svg>`;
+<style>${style(o.line, o.weight)}</style>${body.shapes}${body.cuts}<rect class="seam" x="0" y="0" width="${w}" height="${h}"/></svg>`;
 }

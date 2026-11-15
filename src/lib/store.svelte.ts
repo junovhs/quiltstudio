@@ -18,6 +18,7 @@ const write = (k: string, v: unknown) => { try { localStorage.setItem(k, JSON.st
 
 function normalise(d: Doc): Doc {
   d.settings = { ...DEFAULT_SETTINGS, ...d.settings };
+  if (d.settings.templates.join() === '1,1.5,2,2.5,3,3.5,4,4.5,5,6') d.settings.templates = [...DEFAULT_SETTINGS.templates];
   d.progress ??= {};
   d.name ??= 'My quilt';
   return d;

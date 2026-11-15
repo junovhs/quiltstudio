@@ -42,8 +42,8 @@
     <!-- my template squares, drawn to scale: tap one to size everything from this piece -->
     <div class="templates">
       {#each app.doc.settings.templates as t}
-        <button class="tpl" class:on={pinned && Math.abs(app.doc.settings.anchor!.size - t) < 1e-6} class:match={!pinned && Math.abs(short - t) < 1e-6}
-          title="{fmt(t)}" onclick={() => pinAt(t)}>
+        <button class="tpl" class:on={pinned && Math.abs(app.doc.settings.anchor!.size + 2 * app.doc.settings.seam - t) < 1e-6} class:match={!pinned && Math.abs(short + 2 * app.doc.settings.seam - t) < 1e-6}
+          title="Your {fmt(t)} square (cut) → {fmt(t - 2 * app.doc.settings.seam)} finished" onclick={() => pinAt(t - 2 * app.doc.settings.seam)}>
           <span class="sq" style:--s={t / maxT}></span>
           <span class="lbl">{fmt(t, '')}</span>
         </button>

@@ -55,7 +55,7 @@
     <div class="slot" animate:flip={{ duration: 350, easing: backOut }} in:scale={{ start: 0.4, duration: 450, easing: backOut }}>
       <button class="sw f-{f.id}" class:on={app.fabric === f.id}
         title={f.name + (yards(f.id) ? ` · ${yd(yards(f.id)!)}` : '')}
-        onclick={() => (app.fabric = f.id)}
+        onclick={e => (app.fabric === f.id ? openEditor(e, f.id) : (app.fabric = f.id))}
         use:taps={{ long: e => openEditor(Object.assign(e, { currentTarget: e.target }) as unknown as Event, f.id), double: e => openEditor(Object.assign(e, { currentTarget: e.target }) as unknown as Event, f.id) }}></button>
     </div>
   {/each}
