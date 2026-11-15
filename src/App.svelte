@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { scale } from 'svelte/transition';
   import { backOut } from 'svelte/easing';
-  import { Undo2, Redo2, Scissors, Settings, House, ChevronRight, Grid3x3, Ban, FolderOpen, Printer, Wand2, TriangleAlert, Lock, LockOpen } from '@lucide/svelte';
+  import { Undo2, Redo2, Scissors, Settings, House, ChevronRight, Grid3x3, Ban, FolderOpen, Printer, Wand2, TriangleAlert, Lock, LockOpen, Sparkles } from '@lucide/svelte';
   import Canvas from './components/Canvas.svelte';
   import Palette from './components/Palette.svelte';
   import Swatches from './components/Swatches.svelte';
@@ -12,6 +12,7 @@
   import Projects from './components/Projects.svelte';
   import Account from './components/Account.svelte';
   import Classics from './components/Classics.svelte';
+  import Ideas from './components/Ideas.svelte';
   import { cloud } from './lib/cloud.svelte';
   import Print from './components/Print.svelte';
   import DragGhost from './components/DragGhost.svelte';
@@ -60,7 +61,7 @@
     const mod = e.metaKey || e.ctrlKey, k = e.key.toLowerCase();
     if (mod && k === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
     if (mod && k === 'y') { e.preventDefault(); redo(); return; }
-    if (mod || ui.make || ui.projects || ui.account || ui.classics || ui.print) return;
+    if (mod || ui.make || ui.projects || ui.account || ui.classics || ui.ideas || ui.print) return;
     const b = scope();
     switch (k) {
       case 'v': app.tool = 'select'; break;
@@ -103,6 +104,7 @@
       {#if hereLocked}<Lock size={14} strokeWidth={2.6} />{:else}<LockOpen size={14} strokeWidth={2.2} />{/if}
     </button>
     <div class="spacer"></div>
+    <button class="ideasbtn" onclick={() => (ui.ideas = true)} title="Ideas: quilts made from your fabrics"><Sparkles size={17} /><span>Ideas</span></button>
     <button class="icon" disabled={!app.canUndo} onclick={undo} title="Undo"><Undo2 size={19} /></button>
     <button class="icon" disabled={!app.canRedo} onclick={redo} title="Redo"><Redo2 size={19} /></button>
     <button class="icon seamsbtn" class:on={app.doc.settings.seams} title="Seams" onclick={() => edit(() => (app.doc.settings.seams = !app.doc.settings.seams))}><Grid3x3 size={19} /></button>
@@ -131,6 +133,7 @@
 <Projects />
 <Account />
 <Classics />
+<Ideas />
 <Print />
 <DragGhost />
 <Tidy />
@@ -202,6 +205,9 @@
   .crumb { width: 38px; height: 38px; padding: 5px; border: 0; background: transparent; border-radius: 10px; display: grid; place-items: center; color: var(--muted);
     &:hover { background: var(--sunk); } &.here { background: var(--accent-soft); color: var(--accent); } }
   .spacer { flex: 1; }
+  .ideasbtn { display: flex; align-items: center; gap: 6px; margin-right: 6px; padding: 6px 12px; border: 0; border-radius: 99px; background: var(--accent-soft); color: var(--accent); font-weight: 700;
+    &:hover { background: oklch(from var(--accent) l c h / 24%); }
+    @media (width < 760px) { span { display: none; } padding: 8px; margin-right: 2px; } }
   .where { display: flex; align-items: center; gap: 6px; margin-left: 12px; padding: 4px 10px; border: 0; border-radius: 99px; background: var(--sunk); font-weight: 800; font-size: 14px; white-space: nowrap; letter-spacing: -.01em; color: var(--ink);
     :global(svg) { opacity: .45; } &.locked { background: var(--ink); color: var(--panel); :global(svg) { opacity: 1; } } }
   .lbl { flex: 1; font-size: 12.5px; font-weight: 700; color: var(--muted); }

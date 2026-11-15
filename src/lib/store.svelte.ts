@@ -252,7 +252,7 @@ export const stats = () => analysis;
 export const useCount = (id: string) => analysis.uses.filter(u => u.id === id).reduce((n, u) => n + u.qty, 0);
 
 /* the Make sheet + drawer state */
-export const ui = $state({ make: false, projects: false, account: false, classics: false, palette: false, sizes: false, glow: [] as { def: string; i: number }[], print: null as null | string[], measure: null as null | { def: string; i: number; x: number; y: number } });
+export const ui = $state({ make: false, projects: false, account: false, classics: false, ideas: false, palette: false, sizes: false, glow: [] as { def: string; i: number }[], print: null as null | string[], measure: null as null | { def: string; i: number; x: number; y: number } });
 
 /** tick a Make-sheet item done / not done */
 export function toggleDone(key: string) {
