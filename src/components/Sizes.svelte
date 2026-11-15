@@ -35,7 +35,7 @@
   function use(p: Piece, t: number) {
     const v = finishedFor(app.doc, t);
     if (v <= 0) return;
-    const ok = tryChange(() => resizePiece(app.doc, p, v, v));
+    const ok = tryChange(contain => resizePiece(app.doc, p, v, v, contain));
     if (!ok) { no = p.key; setTimeout(() => (no = ''), 500); }
   }
 

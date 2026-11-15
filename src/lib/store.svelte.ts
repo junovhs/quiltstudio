@@ -237,20 +237,27 @@ export function toggleDone(key: string) {
  * and those squares light up for a moment. `allow` = "block:cell" keys you're deliberately changing.
  */
 import { squareSet, brokenSquares } from './sizes';
-export function tryChange(fn: () => boolean, allow: string[] = []): boolean {
-  const before = app.doc.settings.keepSquares !== false ? squareSet(app.doc) : null;
+export function tryChange(fn: (contain: number) => boolean, allow: string[] = []): boolean {
+  const keep = app.doc.settings.keepSquares !== false;
+  const before = keep ? squareSet(app.doc) : null;
   allow.forEach(k => before?.delete(k));
-  let ok = true;
-  edit(() => { ok = fn(); });
-  if (!ok) { rollback(); return false; }
-  if (before) {
+  let lastBroken: { def: string; i: number }[] = [];
+  // first the natural way (blocks grow/shrink and pass it on); if that would spoil a square,
+  // try keeping the change inside the block itself (its other parts make room)
+  // the natural way first, then keep it in the nearest block that can absorb it
+  for (const contain of [Infinity, 1, 0, 2, 3]) {
+    let ok = true;
+    edit(() => { ok = fn(contain); });
+    if (!ok) { rollback(); continue; }
+    if (!before) return true;
     const broken = brokenSquares(before, app.doc);
-    if (broken.length) {
-      rollback();
-      ui.glow = broken;
-      setTimeout(() => { if (ui.glow === broken) ui.glow = []; }, 2600);
-      return false;
-    }
+    if (!broken.length) return true;
+    rollback();
+    lastBroken = broken;
   }
-  return true;
+  if (lastBroken.length) {
+    ui.glow = lastBroken;
+    setTimeout(() => { if (ui.glow === lastBroken) ui.glow = []; }, 2600);
+  }
+  return false;
 }

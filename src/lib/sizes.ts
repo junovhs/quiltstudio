@@ -102,8 +102,8 @@ function keyOf(c: Content, w: number, h: number) {
  * row/column it sits in holds a locked block, the change is soaked up by the block's
  * other (unlocked) rows/columns instead. If there's no room, nothing changes (returns false).
  */
-export function resizePiece(doc: Doc, p: Piece, size: number, shortTo = size): boolean {
-  return resizeCells(doc, whereIs(doc, p), (cw, ch) => (cw >= ch - 1e-6 ? [size, shortTo] : [shortTo, size]));
+export function resizePiece(doc: Doc, p: Piece, size: number, shortTo = size, contain = Infinity): boolean {
+  return resizeCells(doc, whereIs(doc, p), (cw, ch) => (cw >= ch - 1e-6 ? [size, shortTo] : [shortTo, size]), contain);
 }
 
 /**
@@ -111,7 +111,8 @@ export function resizePiece(doc: Doc, p: Piece, size: number, shortTo = size): b
  * Same rules as above: locks win, the quilt keeps its size when that's locked (the outer border
  * gives), blocks soak up changes they can't pass on.
  */
-export function resizeCells(doc: Doc, where: Map<string, number[]>, target: (cw: number, ch: number) => [number, number]): boolean {
+export function resizeCells(doc: Doc, where: Map<string, number[]>, target: (cw: number, ch: number) => [number, number], contain = Infinity): boolean {
+  // contain = how many levels up a size change may travel before a block must make room inside itself
   const scales = new Map(Object.keys(doc.blocks).map(id => [id, id === doc.root ? { sx: 1, sy: 1 } : (scaleOf(doc, id) ?? { sx: 1, sy: 1 })]));
   const squaresBefore = squareSet(doc);
   const k = (id: string, axis: 'col' | 'row') => (axis === 'col' ? scales.get(id)!.sx : scales.get(id)!.sy);
@@ -148,7 +149,7 @@ export function resizeCells(doc: Doc, where: Map<string, number[]>, target: (cw:
       if (!doc.settings.lockQuilt) return true;
       return (Math.abs(dw) < 1e-9 || absorb(id, 'col', dw, keep.col)) && (Math.abs(dh) < 1e-9 || absorb(id, 'row', dh, keep.row));
     }
-    if (doc.blocks[id].locked) {
+    if (doc.blocks[id].locked || depth >= contain) {
       return (Math.abs(dw) < 1e-9 || absorb(id, 'col', dw, keep.col)) && (Math.abs(dh) < 1e-9 || absorb(id, 'row', dh, keep.row));
     }
     const W = realW(id), H = realH(id);

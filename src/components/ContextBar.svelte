@@ -44,10 +44,10 @@
     if (!v) return;
     const here = scopeId(), cells = [...sel];
     // typing a size on a locked block is your explicit choice: allow it (the lock still protects it from everything else)
-    const ok = tryChange(() => {
+    const ok = tryChange(contain => {
       const unlocked = cells.map(i => b.cells[i].c).filter(c => c.k === 'inst' && app.doc.blocks[c.ref]?.locked).map(c => (c as { ref: string }).ref);
       unlocked.forEach(id => (app.doc.blocks[id].locked = false));
-      const r = resizeCells(app.doc, new Map([[here, cells]]), () => v);
+      const r = resizeCells(app.doc, new Map([[here, cells]]), () => v, contain);
       unlocked.forEach(id => (app.doc.blocks[id].locked = true));
       return r;
     }, cells.map(i => `${here}:${i}`));
