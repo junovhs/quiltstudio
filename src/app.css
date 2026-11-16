@@ -92,6 +92,7 @@
 .work-dialog footer { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 18px; }
 .work-dialog :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .plan-notice { position: fixed; z-index: 90; bottom: calc(var(--bars, 20px) + 20px); left: 50%; translate: -50% 0; width: min(480px, 94vw); padding: 14px; background: var(--panel); border: 2px solid var(--warn); border-radius: 12px; box-shadow: var(--shadow); display: flex; gap: 12px; align-items: center; }
+:root[data-keyboard-open] .work-dialog { position: fixed; top: var(--app-offset, 0px); bottom: auto; margin: 12px auto; max-height: calc(var(--app-height) - 24px); }
 @media (width < 520px) { .work-dialog { padding: 16px; width: calc(100vw - 16px); } }
 @media (prefers-reduced-motion: reduce) { .work-dialog *, .work-dialog { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
 

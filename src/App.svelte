@@ -5,7 +5,10 @@
   import { Undo2, Redo2, Scissors, Settings, House, ChevronRight, Grid3x3, Ban, FolderOpen, Printer, Wand2, TriangleAlert, Lock, LockOpen, Dices, Camera, Ruler as RulerIcon } from '@lucide/svelte';
   import QuiltSize from './components/QuiltSize.svelte';
   import CameraMeasure from './components/CameraMeasure.svelte';
-  import MadePiece from './components/MadePiece.svelte';
+  import Start from './components/Start.svelte';
+  import Journey from './components/Journey.svelte';
+  import ReferenceDraft from './components/ReferenceDraft.svelte';
+  import Making from './components/Making.svelte';
   import { installViewport } from './lib/viewport';
   import Canvas from './components/Canvas.svelte';
   import Palette from './components/Palette.svelte';
@@ -26,7 +29,7 @@
   import { pieces } from './lib/sizes';
   import Picker from './components/Picker.svelte';
   import Thumb from './components/Thumb.svelte';
-  import { app, edit, undo, redo, goTo, scope, enter, loadImages, ui, stats } from './lib/store.svelte';
+  import { app, edit, undo, redo, goTo, scope, enter, loadImages, ui, stats, openMaking } from './lib/store.svelte';
   import { fmt } from './lib/calc';
   import { groupToBlock, merge, snap, xform, type Xf } from './lib/model';
 
@@ -52,7 +55,7 @@
   }
 
   function key(e: KeyboardEvent) {
-    if (ui.resize || ui.camera || ui.made) return;
+    if (ui.resize || ui.camera || ui.workshop || ui.reference || ui.start) return;
     if ((e.target as HTMLElement).closest('input, select, textarea')) return;
     const mod = e.metaKey || e.ctrlKey, k = e.key.toLowerCase();
     if (mod && k === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
@@ -81,6 +84,7 @@
 <svelte:head>{@html `<style>${fabricCss}</style>`}</svelte:head>
 
 <div class="app" class:with-sizes={ui.sizes}>
+  <div class="app-header">
   <header class="top">
     <button class="proj" title={cloud.email ? `My quilts · ${cloud.email}` : 'My quilts'} onclick={() => (ui.projects = true)}>
       <img class="logo" src="/favicon.svg" alt="" /><FolderOpen size={17} />{#if cloud.email}<span class="synced" class:bad={cloud.state === 'error' || cloud.state === 'offline'}></span>{/if}
@@ -111,11 +115,13 @@
     <button class="icon" title="Print blocks" onclick={() => (ui.print = app.path.length ? [app.path.at(-1)!] : [app.doc.root, ...stats().order])}><Printer size={19} /></button>
     <button class="icon" popovertarget="settings" title="Settings"><Settings size={19} /></button>
     <button class="icon camerabtn" title="Measure with camera" aria-label="Measure with camera" onclick={() => ui.camera = true}><Camera size={20} /></button>
-    <button class="make" onclick={() => (ui.make = true)} title="What to cut and sew">
+    <button class="make" onclick={() => openMaking()} title="What to cut and sew">
       <Scissors size={18} />
       <span class="dots">{#each stats().yardage.slice(0, 6) as y}<i class="f-{y.f}"></i>{/each}</span>
     </button>
   </header>
+  <Journey />
+  </div>
 
   <Palette />
   <Canvas />
@@ -137,13 +143,17 @@
 <Picker />
 <QuiltSize />
 {#if ui.camera}<CameraMeasure />{/if}
-{#if ui.made}<MadePiece />{/if}
+{#if ui.start}<Start />{/if}
+{#if ui.reference}<ReferenceDraft />{/if}
+{#if ui.workshop}<Making />{/if}
 {#if ui.notice}<div class="plan-notice" role="alert">{ui.notice}<button onclick={() => ui.notice = ''}>Dismiss</button></div>{/if}
 
 <div popover id="settings">
   <div class="settings">
     <button onclick={() => { document.getElementById('settings')?.hidePopover(); ui.resize = true; }}><RulerIcon size={16} /> Quilt size · {fmt(stats().size.w, '')} × {fmt(stats().size.h)}</button>
-    <button onclick={() => { document.getElementById('settings')?.hidePopover(); ui.made = true; }}>Made piece → next strip</button>
+    <button onclick={() => { document.getElementById('settings')?.hidePopover(); openMaking(); }}>Make & adapt · next batch</button>
+    <button onclick={() => { document.getElementById('settings')?.hidePopover(); ui.reference = true; }}>Bring a picture / tracing reference</button>
+    {#if app.doc.reference}<label>Reference opacity<input aria-label="Reference opacity" type="range" min="0.1" max="0.8" step="0.05" value={app.doc.reference.opacity} oninput={e => edit(() => app.doc.reference!.opacity = +e.currentTarget.value)} /></label>{/if}
     <label title="Seam allowance"><span class="glyph seam"></span><span class="lbl">seam</span><input type="text" inputmode="decimal" value={fmt(app.doc.settings.seam, '')} onchange={e => edit(() => (app.doc.settings.seam = parseFloat(e.currentTarget.value) || 0.25))} />″</label>
     <label title="Width across the fabric roll, used for yardage estimates"><span class="glyph wof"></span><span class="lbl">fabric roll width</span><input type="text" inputmode="decimal" value={app.doc.settings.wof} onchange={e => edit(() => (app.doc.settings.wof = parseFloat(e.currentTarget.value) || 42))} />″</label>
     <label title="Binding strip width (what you bought)"><span class="glyph bindg"></span><span class="lbl">binding strip</span><input type="text" inputmode="decimal" value={fmt(app.doc.settings.bindingStrip ?? 2, '')} onchange={e => edit(() => (app.doc.settings.bindingStrip = parseFloat(e.currentTarget.value) || 2))} />″</label>
@@ -169,6 +179,7 @@
     grid-template: "top top top top" 56px "dock palette stage swatches" 1fr / 56px 232px 1fr 72px;
   }
   .top { grid-area: top; display: flex; align-items: center; gap: 4px; padding: 0 12px 0 14px; border-bottom: 1px solid var(--line); background: var(--panel); min-width: 0; }
+  .app-header { grid-area: top; min-width: 0; } .top { min-height: 52px; }
   :global(:root) {
     @media (width < 760px) {
       --bars-dock: calc(66px + env(safe-area-inset-bottom));
@@ -253,4 +264,6 @@
   ::view-transition-new(canvas) { animation-name: vt-in; }
   @keyframes -global-vt-out { to { opacity: 0; scale: .92; } }
   @keyframes -global-vt-in { from { opacity: 0; scale: 1.06; } }
+  .app, .app.with-sizes { grid-template-rows: auto minmax(0,1fr); }
+  @media(width < 760px) { .app { grid-template-rows: auto minmax(0,1fr) auto auto; } .app.with-sizes { grid-template-rows: auto minmax(0,1fr) auto auto auto; } }
 </style>

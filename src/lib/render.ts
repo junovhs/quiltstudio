@@ -2,6 +2,8 @@
 import { sum, type Content, type Doc } from './model';
 import { partsOf, place } from './shapes';
 import { analyse, dim, fmt, yd } from './calc';
+import { remainingAnalysis, pieceState } from './planning';
+import { planWarnings } from './making-guide';
 
 export type Paints = Record<string, string | CanvasPattern>;
 type Ctx = CanvasRenderingContext2D;
@@ -118,8 +120,9 @@ function check(ctx: Ctx, cx: number, cy: number, r = 11) {
 
 /** a printable/shareable picture: the quilt, fabric to buy, every cut to scale, and what to sew */
 export async function oneSheet(doc: Doc, images: Record<string, string>): Promise<Blob> {
-  const a = analyse(doc);
-  const W = 1800, M = 70, done = doc.progress ?? {};
+  const started = !!Object.keys(doc.making ?? {}).length || !!doc.measurements?.length;
+  const a = started ? remainingAnalysis(doc) : analyse(doc);
+  const W = 1800, M = 70, done = started ? {} : doc.progress ?? {};
   const cv = document.createElement('canvas');
   cv.width = W; cv.height = 6000;
   const ctx = cv.getContext('2d')!;
@@ -153,6 +156,12 @@ export async function oneSheet(doc: Doc, images: Record<string, string>): Promis
   text(ctx, `${dim(a.finishing.backing.w, a.finishing.backing.h)}  backing · batting`, fx, fy + 30, 20, MUTED, 600);
 
   let y = Math.max(qy + qh, fy + 40) + 80;
+  text(ctx, started ? 'Remaining cuts · already-cut and made panels excluded' : 'Whole-design cutting plan', M, y, 28, INK, 750); y += 42;
+  text(ctx, `Seam ${fmt(doc.settings.seam)} · fabric roll ${fmt(doc.settings.wof)} · ${new Date().toLocaleDateString()}`, M, y, 20, MUTED, 500); y += 36;
+  const completed = doc.blocks[doc.root].cells.map((c, i) => ({ c, status: pieceState(doc, i) })).filter(p => p.status !== 'planned');
+  if (completed.length) { text(ctx, `Recorded: ${completed.slice(0, 12).map(p => `${p.c.label} ${p.status}`).join(' · ')}${completed.length > 12 ? ' …' : ''}`, M, y, 17, MUTED, 500); y += 34; }
+  const checks = planWarnings(doc);
+  text(ctx, checks.length ? `${checks.length} construction check(s): review the Sewing guide before cutting. Export the making plan for full notes.` : 'Check a test unit before repeating a batch. Camera measurements are reviewed estimates.', M, y, 18, MUTED, 500); y += 60;
 
   // a row-wrapping layout for pictures with ×counts
   type Item = { w: number; h: number; draw: (x: number, y: number) => void; n?: number; label?: string; done?: boolean };

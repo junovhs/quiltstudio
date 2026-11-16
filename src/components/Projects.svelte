@@ -131,7 +131,7 @@
 
       <!-- every quilt -->
       <section class="all">
-        <button class="card new" onclick={() => { newProject(blankDoc(), 'New quilt'); close(); }}>
+        <button class="card new" onclick={() => { close(); ui.start = true; }}>
           <span class="plus"><Plus size={28} /></span><span class="pname">New quilt</span>
         </button>
         {#each shown as p (p.id)}

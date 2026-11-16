@@ -3,7 +3,8 @@
   import { backOut } from 'svelte/easing';
   import { RotateCw, FlipHorizontal2, FlipVertical2, Combine, Group, Grid2x2, Trash2, Maximize2, X, Printer, Scissors, Lock, LockOpen, Ruler } from '@lucide/svelte';
   import Tile from './Tile.svelte';
-  import { app, edit, enter, scope, scopeId, ui, rollback, tryChange } from '../lib/store.svelte';
+  import { app, edit, enter, scope, scopeId, ui, rollback, tryChange, openMaking, useCount, replaceDoc } from '../lib/store.svelte';
+  import { independentPiece } from '../lib/planning';
   import { pieces, whereIs, resizePiece, resizeCells, parseSize } from '../lib/sizes';
   import { cellSize, fmt } from '../lib/calc';
   import { fabricsOf, groupToBlock, makeKind, merge, mergeSame, snap, splitCell, xform, cellIndexAt, UNITS, type Kind, type Xf } from '../lib/model';
@@ -83,7 +84,7 @@
         <button class="icon" title="Back" onclick={() => (splitting = false)}><X size={16} /></button>
       </div>
     {:else}
-      {#if !app.path.length && sel.length === 1}<button class="icon" title="Record made size and plan next strip" aria-label="Record made size and plan next strip" onclick={() => ui.made = true}><Ruler size={19} /></button>{/if}
+      {#if !app.path.length && sel.length === 1}<button class="icon" title="Record made size and plan next strip" aria-label="Record made size and plan next strip" onclick={() => openMaking(sel[0])}><Ruler size={19} /></button>{/if}
       {#if sz}
         <!-- finished size in inches, cut size underneath -->
         <!-- the finished size: tap it and type what it should be ("9" = 9×9, or "9 x 8") -->
@@ -94,6 +95,7 @@
         <span class="sep"></span>
       {/if}
       {#if first.c.k === 'inst' && sel.length === 1}
+        {#if !app.path.length && useCount(first.c.ref) > 1}<button title="Make this copy independent before changing its design" onclick={() => replaceDoc(independentPiece($state.snapshot(app.doc), sel[0]))}>Unlink copy</button>{/if}
         <button class="icon" title="Open this block  ↵" onclick={() => first.c.k === 'inst' && enter(first.c.ref)}><Maximize2 size={17} /></button>
         {@const blk = app.doc.blocks[first.c.ref]}
         <button class="icon" class:on={blk?.locked} title={blk?.locked ? 'Size locked' : 'Lock its size'} onclick={() => edit(() => { if (blk) blk.locked = !blk.locked; })}>

@@ -80,6 +80,7 @@
     newProject(structuredClone(c.doc), nameOf(c.idea));
     for (const [id, url] of Object.entries(images)) setImage(id, await (await fetch(url)).blob());
     ui.ideas = false;
+    ui.notice = 'Your idea is ready to make your own. Set its Size, refine the design, then open Make & adapt.';
   }
   /** one tap: the single best of a fresh batch, straight into a new quilt */
   async function surprise() {

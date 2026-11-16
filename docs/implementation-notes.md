@@ -1,6 +1,6 @@
 # Adaptive making and camera measurement
 
-Implemented locally on `codex/adaptive-camera`, November 15, 2026. Not deployed.
+Historical first-slice notes, November 15, 2026. Released as `cb041bd`. The integrated overhaul below supersedes this scope: see [coherent making release](coherent-making-release.md).
 
 The first complete flow is: set the intended quilt size → photograph a piece with a ruler → review its outline and dimensions → select its place in the quilt → record its actual size → calculate a strip for the next join. Camera processing and measurement records stay in the existing client-side application; no measurement API or image upload was added. Optional existing project sync can carry measurement numbers as part of the design.
 

@@ -4,7 +4,8 @@
   import { Pin } from '@lucide/svelte';
   import Node from './Node.svelte';
   import Tile from './Tile.svelte';
-  import { app } from '../lib/store.svelte';
+  import { app, ui } from '../lib/store.svelte';
+  import { pieceState } from '../lib/planning';
   import { drag } from '../lib/drag.svelte';
 
   let { id, depth = 0, scope = false, sel = [] }: { id: string; depth?: number; scope?: boolean; sel?: number[] } = $props();
@@ -33,6 +34,10 @@
             {/if}
           </div>
         {/key}
+        {#if scope && id === app.doc.root && ui.showProgress && cell.c.k !== 'empty'}
+          {@const status = pieceState(app.doc, i)}
+          {#if status !== 'planned' || app.doc.nextPiece === cell.id}<span class="making-mark" class:physical={status !== 'planned'} title={`${cell.label ?? `P${i + 1}`} · ${status}`}>{status === 'measured' || status === 'sewn' ? '✓' : status === 'cut' ? '✂' : '→'} {cell.label ?? `P${i + 1}`}</span>{/if}
+        {/if}
         {#if anchor && anchor.def === id && anchor.i === i && (scope || app.tool === 'measure')}
           <span class="pin" title="Everything is sized from this piece"><Pin size={11} strokeWidth={2.5} /></span>
         {/if}
@@ -69,5 +74,6 @@
     background: var(--accent); color: white; box-shadow: 0 1px 4px oklch(0% 0 0 / 30%);
     animation: pinIn .5s var(--spring);
   }
+  .making-mark { position: absolute; left: 3px; top: 3px; z-index: 2; pointer-events: none; background: #ffe1a0; color: #2a221d; padding: 3px 5px; border-radius: 4px; font-size: 11px; font-weight: 800; } .making-mark.physical { background: #c6f3df; }
   @keyframes pinIn { from { scale: 0; } }
 </style>

@@ -8,6 +8,8 @@
   import { fmt } from '../lib/calc';
   import { blockDiagram, piecesOf, pieceSvg, realSize } from '../lib/print';
   import { swipeClose, isPhone } from '../lib/sheet';
+  import { planWarnings } from '../lib/making-guide';
+  const checks = $derived(planWarnings(app.doc));
 
   let ink = $state(false);
   let actual = $state(true);
@@ -84,6 +86,8 @@
 
     <!-- the pages, as they'll come out of the printer -->
     <div class="previews">
+      <p class="print-notes">Design diagrams · seam allowance {fmt(app.doc.settings.seam)}. These include already-made pieces. Use Export making plan in Make & adapt for remaining cuts and progress.</p>
+      {#if checks.length}<details><summary>{checks.length} construction checks</summary>{#each checks as note}<p>{note}</p>{/each}</details>{/if}
       {#each pages as p (p.id)}
         <div class="paper" in:scale={{ start: 0.8, duration: 400, easing: backOut }}>
           <div class="ph"><span class="count big">{p.n}</span><span class="sz">{fmt(p.size.w, '')} × {fmt(p.size.h)}</span>{#if p.d.actual}<span class="one">1:1</span>{/if}</div>
@@ -102,6 +106,7 @@
 <!-- what actually prints: one block per page -->
 {#if printing}
   <div id="print-root">
+    <section class="page"><h1>{app.doc.name} · design diagrams</h1><p>Seam allowance {fmt(app.doc.settings.seam)}. Diagrams show finished design geometry, not seam-inclusive cutting templates. Recorded made pieces are included; do not recut them from these diagrams.</p>{#each checks as note}<p>{note}</p>{/each}<p>Camera measurements are reviewed estimates. Check a test unit before repeating a batch. The making-plan export contains current remaining cuts and physical checkpoints.</p></section>
     {#each pages as p (p.id)}
       <section class="page">
         <div class="ph"><span class="count big">{p.n}</span><span class="sz">{fmt(p.size.w, '')} × {fmt(p.size.h)}</span>{#if p.d.actual}<span class="one">1:1 · 1 square = 1″</span>{/if}</div>

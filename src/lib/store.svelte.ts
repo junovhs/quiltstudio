@@ -2,7 +2,7 @@ import { flushSync } from 'svelte';
 import { analyse, fitToAnchor } from './calc';
 import { thumbnail } from './render';
 import { DEFAULT_SETTINGS, defaultDoc, setSnapshot, uid, type Content, type Doc, type Sym } from './model';
-import { madeChangeError } from './planning';
+import { madeChangeError, ensurePieceIds, reconcileProgress, progressEvidence } from './planning';
 
 setSnapshot(v => $state.snapshot(v) as typeof v);
 
@@ -45,6 +45,8 @@ function normalise(d: Doc): Doc {
   }
   if (tplV < 3) d.settings.tplVersion = 3;
   d.progress ??= {};
+  ensurePieceIds(d);
+  d.progressEvidence ??= progressEvidence(d);
   d.name ??= 'My quilt';
   return d;
 }
@@ -74,8 +76,8 @@ export const app = $state({
   sel: [] as number[],           // selected cell indexes in the current scope
   tool: 'select' as Tool,
   sym: 'none' as Sym,
-  fabric: 'floral',              // active fabric (recolour tool, new brushes)
-  brush: { k: 'hst', a: 'floral', b: 'cream', corner: 'br' } as Content,
+  fabric: booted.doc.fabrics[0]?.id ?? '',
+  brush: { k: 'hst', a: booted.doc.fabrics[0]?.id ?? '', b: booted.doc.fabrics[1]?.id ?? booted.doc.fabrics[0]?.id ?? '', corner: 'br' } as Content,
   images: {} as Record<string, string>, // fabric id -> object URL
   canUndo: false,
   canRedo: false,
@@ -129,10 +131,12 @@ function fixScope() {
 let t: ReturnType<typeof setTimeout>;
 export function save(validateMade = true) {
   fitToAnchor(app.doc);
-  if (validateMade && past.length && app.doc.measurements?.length) {
+  ensurePieceIds(app.doc);
+  if (validateMade && past.length) {
     const before = JSON.parse(past.at(-1)!) as Doc;
     const message = madeChangeError(before, $state.snapshot(app.doc) as Doc);
     if (message) { app.doc = before; past.pop(); sync(); fixScope(); ui.notice = message; }
+    else reconcileProgress(before, app.doc);
   }
   clearTimeout(t);
   t = setTimeout(persist, 300);
@@ -140,7 +144,7 @@ export function save(validateMade = true) {
 let thumbTimer: ReturnType<typeof setTimeout>;
 function persist() {
   const id = projects.current;
-  try { localStorage.setItem(docKey(id), snapshot()); } catch {}
+  try { localStorage.setItem(docKey(id), snapshot()); } catch { ui.notice = 'This device could not save the quilt. Export a .quilt file from My quilts to keep your work.'; }
   const meta = projects.list.find(p => p.id === id);
   if (meta) { meta.name = app.doc.name ?? 'My quilt'; meta.updated = Date.now(); }
   write(LIST, $state.snapshot(projects.list));
@@ -159,6 +163,9 @@ function load(id: string, doc: Doc) {
   app.images = {};
   projects.current = id; write(CUR, id);
   app.doc = normalise(doc); app.path = []; app.sel = [];
+  app.fabric = app.doc.fabrics[0]?.id ?? '';
+  app.brush = { k: 'hst', a: app.fabric, b: app.doc.fabrics[1]?.id ?? app.fabric, corner: 'br' };
+  ui.activePiece = null;
   past.length = 0; future.length = 0; sync();
   loadImages();
   persist();
@@ -258,11 +265,18 @@ export const stats = () => analysis;
 export const useCount = (id: string) => analysis.uses.filter(u => u.id === id).reduce((n, u) => n + u.qty, 0);
 
 /* the Make sheet + drawer state */
-export const ui = $state({ notice: '', resize: false, camera: false, made: false, cameraResult: null as null | { w: number; h: number }, make: false, projects: false, account: false, classics: false, ideas: false, palette: false, sizes: false, glow: [] as { def: string; i: number }[], print: null as null | string[], measure: null as null | { def: string; i: number; x: number; y: number } });
+export const ui = $state({ start: !read('quiltstudio.journey-seen', false), reference: false, workshop: false, showProgress: true, activePiece: null as string | null, notice: '', resize: false, camera: false, cameraResult: null as null | { w: number; h: number }, make: false, projects: false, account: false, classics: false, ideas: false, palette: false, sizes: false, glow: [] as { def: string; i: number }[], print: null as null | string[], measure: null as null | { def: string; i: number; x: number; y: number } });
+
+export function dismissStart() { ui.start = false; write('quiltstudio.journey-seen', true); }
+export function openMaking(index?: number) {
+  if (index !== undefined) ui.activePiece = app.doc.blocks[app.doc.root].cells[index]?.id ?? null;
+  else if (!app.path.length && app.sel.length === 1) ui.activePiece = app.doc.blocks[app.doc.root].cells[app.sel[0]]?.id ?? null;
+  ui.workshop = true; ui.make = false; ui.showProgress = true;
+}
 
 /** tick a Make-sheet item done / not done */
 export function toggleDone(key: string) {
-  edit(() => { const p = (app.doc.progress ??= {}); if (p[key]) delete p[key]; else p[key] = true; });
+  edit(() => { const p = (app.doc.progress ??= {}); if (p[key]) delete p[key]; else p[key] = true; app.doc.progressEvidence = progressEvidence(app.doc); });
 }
 
 /**

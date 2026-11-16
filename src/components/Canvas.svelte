@@ -17,7 +17,7 @@
   let stage: HTMLDivElement;
   let flash = $state('');
   // no words: a little shake says "can't do that"
-  function say() { flash = 'no'; setTimeout(() => (flash = ''), 450); }
+  function say() { flash = 'no'; ui.notice = 'That edit does not fit the current layout or size locks. Check the selected piece and its locks, or choose a different position.'; setTimeout(() => (flash = ''), 450); }
 
   /* ---------- what's under a point ---------- */
   function hitEl(t: Element | null) {
@@ -192,6 +192,7 @@
       <div class="quilt">
         {#if bw}<div class="binding f-{app.doc.settings.binding}"></div>{/if}
         <Node id={scopeId()} scope sel={app.sel} />
+        {#if isRoot && app.doc.reference?.visible}<img class="tracing-reference" src={app.doc.reference.image} alt="Tracing reference" style:opacity={app.doc.reference.opacity} />{/if}
       </div>
     </div>
   </div>
@@ -231,6 +232,7 @@
   }
   .quilt { grid-area: q; position: relative; box-shadow: 0 2px 4px oklch(30% 0.04 50 / 10%), 0 16px 48px oklch(30% 0.04 50 / 18%); }
   .binding { position: absolute; inset: calc(-1 * var(--bw) * var(--ppi)); }
+  .tracing-reference { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; pointer-events: none; }
   .fit { position: absolute; right: 12px; bottom: 12px; width: 44px; height: 44px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 14px;
     background: var(--panel); box-shadow: var(--shadow); color: var(--ink); }
   @keyframes shake { 20%, 60% { translate: -6px; } 40%, 80% { translate: 6px; } }

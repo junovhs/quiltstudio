@@ -1,7 +1,7 @@
 {
   "name": "QuiltStudio",
   "short_name": "Quilt",
-  "description": "Design quilts from simple shapes and see exactly what to cut.",
+  "description": "Design a quilt you love. Plan your next cuts and adapt to what you make.",
   "id": "/",
   "start_url": "/",
   "display": "standalone",

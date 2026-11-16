@@ -4,7 +4,7 @@
   import { Scissors, X, ChevronRight, TriangleAlert, Layers, Check } from '@lucide/svelte';
   import Tile from './Tile.svelte';
   import Thumb from './Thumb.svelte';
-  import { app, stats, ui, toggleDone } from '../lib/store.svelte';
+  import { app, stats, ui, toggleDone, openMaking } from '../lib/store.svelte';
   import { dim, fmt, yd } from '../lib/calc';
   import { taps } from '../lib/gestures';
   import { swipeClose, isPhone } from '../lib/sheet';
@@ -44,7 +44,9 @@
     </header>
 
     <div class="body">
-      <button class="adaptive-entry" onclick={() => { ui.make = false; ui.made = true; }}>Made a piece? Plan the next strip →</button>
+      <button class="adaptive-entry" onclick={() => openMaking()}>Make & adapt · remaining cuts →</button>
+      <p class="plan-reference">Whole design reference. Counts include all pieces, including work already made. Double-tap a group to check it off; quantity changes clear that group's check.</p>
+      {#if a.warnings.length}<details><summary>Construction checks · {a.warnings.length}</summary>{#each a.warnings as warning}<p>{warning}</p>{/each}</details>{/if}
       {#if app.doc.measurements?.length}<p class="plan-reference">This is the full design reference, including pieces already measured and made. Use the next-strip helper to plan your next batch.</p>{/if}
       <!-- 1 · fabric to buy -->
       <section class="buy">
@@ -59,7 +61,7 @@
       </section>
 
       <!-- 2 · cut: every piece drawn to scale -->
-      <h3><Scissors size={15} /></h3>
+      <h3><Scissors size={15} /> Cut sizes · seams included</h3>
       {#each a.yardage as y}
         <section class="cuts">
           {#each y.cuts as c, i}
@@ -74,7 +76,7 @@
                 {/if}
               </div>
               <span class="n count">{c.qty}</span>
-              <span class="reveal">{dim(c.w, c.h)}{#if c.trimTo}<em> → {fmt(c.trimTo)}</em>{/if}</span>
+              <span class="cut-label">{dim(c.w, c.h)}{#if c.trimTo}<em> → {fmt(c.trimTo)}</em>{/if}</span><small class="method-label">{c.how}</small>
               {#if done(c.key)}<span class="tick" in:scale={{ start: 0, duration: 500, easing: backOut }}><Check size={14} strokeWidth={3.5} /></span>{/if}
             </div>
           {/each}
@@ -82,7 +84,7 @@
       {/each}
 
       <!-- 3 · sew: small units → blocks → quilt -->
-      <h3><Layers size={15} /></h3>
+      <h3><Layers size={15} /> Sew units, then blocks</h3>
       <section class="flow">
         {#each a.units as u, i}
           <div class="piece" class:done={done(u.key)} title="{dim(u.w, u.h)}" use:taps={{ double: () => toggleDone(u.key) }} role="button" tabindex="-1" in:scale={{ start: 0.7, delay: 80 + i * 40, duration: 450, easing: backOut }}>
@@ -133,9 +135,9 @@
   svg { position: absolute; inset: 0; width: 100%; height: 100%; line { stroke: oklch(100% 0 0 / 85%); stroke-width: 1.5; stroke-dasharray: 5 4; vector-effect: non-scaling-stroke; } }
   .n { font-size: 17px; line-height: 1; }
   .reveal { position: absolute; bottom: calc(100% + 6px); left: 50%; translate: -50% 4px; white-space: nowrap; padding: 3px 8px; border-radius: 7px;
-    background: var(--ink); color: var(--panel); font-size: 12px; font-weight: 600; opacity: 0; pointer-events: none; transition: opacity .2s, translate .3s var(--spring);
-    em { font-style: normal; opacity: .7; } }
+    background: var(--ink); color: var(--panel); font-size: 12px; font-weight: 600; opacity: 0; pointer-events: none; transition: opacity .2s, translate .3s var(--spring); }
   .piece:hover .reveal { opacity: 1; translate: -50% 0; }
+  .cut-label { font-size: 13px; font-weight: 700; } .method-label { font-size: 11px; max-width: 140px; text-align: center; color: var(--muted); } .plan-reference { font-size: 13px; color: var(--muted); }
   .piece { cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
   .piece .cut, .piece .unit, .piece .n { transition: opacity .3s, filter .3s, scale .35s var(--spring); }
   .piece.done .cut, .piece.done .unit { opacity: .45; filter: saturate(.5); }

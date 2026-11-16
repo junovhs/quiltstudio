@@ -35,7 +35,7 @@ export type Content =
 
 export type Kind = Content['k'];
 
-export interface Cell { x: number; y: number; cs: number; rs: number; c: Content }
+export interface Cell { id?: string; label?: string; x: number; y: number; cs: number; rs: number; c: Content }
 export interface Block { id: string; name: string; cols: number[]; rows: number[]; cells: Cell[]; /** keep this block's size when tidying */ locked?: boolean }
 export interface Fabric { id: string; name: string; color: string; tile: number; image?: boolean }
 /** the piece everything is sized from: e.g. "this checker square is my 1½″ template" */
@@ -73,6 +73,13 @@ export interface Doc {
   progress?: Record<string, boolean>;
   /** Measurements of individual, already-made occurrences in the root layout. */
   measurements?: import('./planning').MadeMeasurement[];
+  making?: Record<string, { state: 'cut' | 'sewn'; fingerprint: string; at: number }>;
+  joins?: { source: string; strip: string; side: 'top' | 'right' | 'bottom' | 'left' }[];
+  nextPiece?: string;
+  nextPieceNumber?: number;
+  reference?: { image: string; name: string; opacity: number; visible: boolean };
+  progressEvidence?: Record<string, string>;
+  madeArchive?: { label: string; pieceId: string; w: number; h: number; state: string; at: number }[];
 }
 
 export const uid = (p = 'b') => p + Math.random().toString(36).slice(2, 8);

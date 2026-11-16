@@ -119,7 +119,7 @@
   }
   function accept() {
     if (!estimate || estimate.error || !reviewed) return;
-    ui.cameraResult = { w: estimate.w, h: estimate.h }; ui.camera = false; ui.made = true;
+    ui.cameraResult = { w: estimate.w, h: estimate.h }; ui.camera = false; ui.workshop = true;
   }
   function hidden() { if (document.hidden && (live || busy)) { stop(); error = 'Camera paused while the app was away. Tap Open camera to resume.'; } }
   onMount(() => { dialog.showModal(); document.addEventListener('visibilitychange', hidden); });
