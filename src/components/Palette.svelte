@@ -15,9 +15,15 @@
   const TOOLS: [Tool, typeof MousePointer2, string][] = [
     ['select', MousePointer2, 'Select  V'], ['paint', Paintbrush, 'Paint  B'], ['recolor', PaintBucket, 'Recolour  K'], ['measure', Ruler, 'Measure  M'],
   ];
-  const SYMS: [Sym, typeof Square, string][] = [
-    ['none', Square, 'No mirror'], ['h', Columns2, 'Mirror ↔'], ['v', Rows2, 'Mirror ↕'], ['quad', Grid2x2, 'Mirror ✚'], ['rot', RefreshCw, 'Turn ×4'],
+  const SYMS: [Sym, typeof Square, string, string][] = [
+    ['none', Square, 'Off', 'Edits only change what you pick'],
+    ['h', Columns2, 'Left ↔ right', 'Copies each edit to the mirror spot across the middle'],
+    ['v', Rows2, 'Top ↕ bottom', 'Copies each edit to the mirror spot above or below'],
+    ['quad', Grid2x2, 'Four ways', 'Mirrors left-right and top-bottom: 4 copies'],
+    ['rot', RefreshCw, 'Turn ×4', 'Copies each edit turned round the centre (square blocks)'],
   ];
+  const symNow = $derived(SYMS.find(s => s[0] === app.sym)!);
+  const SymIcon = $derived(symNow[1]);
   // the four shapes, drawn with the current fabrics
   const shape = (k: Kind): Content => makeKind(k, app.brush.k === 'inst' ? [app.fabric, 'cream'] : fabricsOf(app.brush), app.fabric);
 
@@ -65,10 +71,22 @@
     {#if app.brush.k === 'inst'}<Thumb id={app.brush.ref} rot={app.brush.rot} flip={app.brush.flip} />{:else}<Tile c={app.brush} />{/if}
   </button>
   <hr />
-  {#each SYMS as [s, Icon, tip]}
-    <button class="icon sym" class:on={app.sym === s && s !== 'none'} class:off={app.sym === 'none' && s === 'none'} title={tip} onclick={() => (app.sym = s)}><Icon size={17} /></button>
-  {/each}
+  <button class="symbtn" class:on={app.sym !== 'none'} popovertarget="symmenu" title="Mirror: {symNow[2]}">
+    <SymIcon size={17} /><span>Mirror</span>
+  </button>
 </nav>
+
+<div popover id="symmenu">
+  <div class="symmenu">
+    <b>Mirror edits</b>
+    <p>Paint, recolour, turn or change a piece and its mirror partners change too. The dashed lines show the mirror; partners of your selection get a dashed outline.</p>
+    {#each SYMS as [s, Icon, name, tip]}
+      <button class:on={app.sym === s} onclick={() => { app.sym = s; document.getElementById('symmenu')?.hidePopover(); }}>
+        <Icon size={17} /><span><b>{name}</b><small>{tip}</small></span>
+      </button>
+    {/each}
+  </div>
+</div>
 
 <aside class="palette" class:sheet-open={ui.palette} use:swipeClose={{ close: () => (ui.palette = false) }}>
   <span class="grabber" data-grab onclick={() => (ui.palette = false)} role="presentation"></span>
@@ -81,8 +99,8 @@
       {/key}
     </button>
     <div class="msym">
-      {#each SYMS as [s, Icon, tip]}
-        <button class="icon" class:on={app.sym === s} title={tip} onclick={() => (app.sym = s)}><Icon size={17} /></button>
+      {#each SYMS as [s, Icon, name]}
+        <button class="icon" class:on={app.sym === s} title={name} onclick={() => (app.sym = s)}><Icon size={17} /></button>
       {/each}
     </div>
     <div class="turns">
@@ -127,7 +145,15 @@
       translate: 0 calc(var(--i) * 40px); transition: translate .45s var(--spring); }
   }
   hr { width: 22px; border: 0; border-top: 1px solid var(--line); margin: 8px 0; }
-  .sym { color: var(--muted); &.off { color: var(--ink); background: var(--sunk); } }
+  .symbtn { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 46px; padding: 6px 0; border: 0; border-radius: 10px; background: transparent; color: var(--muted);
+    span { font-size: 10px; font-weight: 700; } &:hover { background: var(--sunk); color: var(--ink); }
+    &.on { background: var(--accent-soft); color: var(--accent); } }
+  #symmenu { inset: auto; left: 64px; top: 220px; width: 290px; }
+  .symmenu { display: grid; gap: 4px;
+    > b { font-size: 15px; } p { margin: 0 0 6px; font-size: 12.5px; color: var(--muted); }
+    button { display: flex; align-items: center; gap: 10px; padding: 8px; border: 0; border-radius: 10px; background: transparent; text-align: left; color: var(--ink);
+      span { display: grid; } small { color: var(--muted); font-size: 11.5px; }
+      &:hover { background: var(--sunk); } &.on { background: var(--accent-soft); color: var(--accent); } } }
 
   .palette { grid-area: palette; display: flex; flex-direction: column; gap: 14px; padding: 14px 12px; background: var(--panel); border-right: 1px solid var(--line); min-height: 0; }
   .brush { display: flex; gap: 8px; align-items: center; }
@@ -161,7 +187,7 @@
     .dock button.icon { width: 44px; height: 44px; }
     .tools .pill { width: 44px; height: 44px; translate: calc(var(--i) * 48px) 0; }
     .tools { gap: 4px; }
-    .dock > hr, .sym { display: none; }
+    .dock > hr, .symbtn { display: none; }
     .mbrush { display: block; position: relative; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 12px; overflow: hidden; background: var(--sunk);
       box-shadow: var(--shadow); container-type: size; transition: box-shadow .25s, scale .35s var(--spring);
       &.active { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent); } }
@@ -185,7 +211,7 @@
   /* ---------- phones on their side ---------- */
   @media (height < 500px) and (width >= 760px) {
     .dock { padding: 6px 0; gap: 2px; overflow-y: auto; scrollbar-width: none; }
-    .dock > hr, .sym { display: none; }
+    .dock > hr, .symbtn { display: none; }
     .mbrush { display: block; position: relative; width: 40px; height: 40px; flex: none; padding: 0; border: 0; border-radius: 11px; overflow: hidden; background: var(--sunk); box-shadow: var(--shadow); container-type: size;
       &.active { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent); } }
     .palette {

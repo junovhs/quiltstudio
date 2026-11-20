@@ -279,6 +279,64 @@ export function cellsInBox(b: Block, bx: ReturnType<typeof bbox>) {
   return ok ? inside : null;
 }
 
+export type Box = ReturnType<typeof bbox>;
+/** can this piece be cut along a vertical ('x') or horizontal ('y') grid line without changing its look? */
+function cuttable(c: Content, axis: 'x' | 'y') {
+  return c.k === 'solid' || c.k === 'empty' || (c.k === 'strips' && (axis === 'x' ? c.dir === 'h' : c.dir === 'v'));
+}
+/**
+ * Marquee selection: the box (in grid tracks) the user dragged out. Plain pieces that straddle
+ * its edges (e.g. a band running the full width) are cut along the grid line; pieces that can't be
+ * cut cleanly (triangles, blocks) make the box grow to take them in whole. Returns the cells inside.
+ */
+export function carveBox(b: Block, box: Box): { box: Box; cells: number[] } {
+  const bx = { ...box };
+  const straddles = (c: Cell) => {
+    const hit = c.x < bx.x1 && c.x + c.cs > bx.x0 && c.y < bx.y1 && c.y + c.rs > bx.y0;
+    return hit && !(c.x >= bx.x0 && c.y >= bx.y0 && c.x + c.cs <= bx.x1 && c.y + c.rs <= bx.y1);
+  };
+  const cutsX = (c: Cell) => [bx.x0, bx.x1].some(k => k > c.x && k < c.x + c.cs);
+  const cutsY = (c: Cell) => [bx.y0, bx.y1].some(k => k > c.y && k < c.y + c.rs);
+  // 1. grow over anything that can't be cut, until nothing uncuttable straddles
+  for (let grew = true; grew;) {
+    grew = false;
+    for (const c of b.cells) {
+      if (!straddles(c)) continue;
+      if ((cutsX(c) && !cuttable(c.c, 'x')) || (cutsY(c) && !cuttable(c.c, 'y'))) {
+        bx.x0 = Math.min(bx.x0, c.x); bx.y0 = Math.min(bx.y0, c.y);
+        bx.x1 = Math.max(bx.x1, c.x + c.cs); bx.y1 = Math.max(bx.y1, c.y + c.rs);
+        grew = true;
+      }
+    }
+  }
+  // 2. cut the rest along the box edges
+  const cut = (i: number, axis: 'x' | 'y', k: number) => {
+    const c = b.cells[i], p = axis, s = axis === 'x' ? 'cs' : 'rs';
+    const rest: Cell = { x: c.x, y: c.y, cs: c.cs, rs: c.rs, c: structuredClone($snap(c.c)) };
+    rest[p] = k; rest[s] = c[p] + c[s] - k;
+    c[s] = k - c[p];
+    b.cells.push(rest);
+  };
+  for (let i = 0; i < b.cells.length; i++) {
+    const c = b.cells[i];
+    if (!straddles(c)) continue;
+    const kx = [bx.x0, bx.x1].find(k => k > c.x && k < c.x + c.cs);
+    if (kx != null) { cut(i, 'x', kx); i--; continue; }
+    const ky = [bx.y0, bx.y1].find(k => k > c.y && k < c.y + c.rs);
+    if (ky != null) { cut(i, 'y', ky); i--; }
+  }
+  const cells = b.cells.map((c, i) => (c.x >= bx.x0 && c.y >= bx.y0 && c.x + c.cs <= bx.x1 && c.y + c.rs <= bx.y1 ? i : -1)).filter(i => i >= 0);
+  return { box: bx, cells };
+}
+
+/** mirror the content of the given cells onto their symmetric partners */
+export function mirrorOut(b: Block, idxs: number[], sym: Sym) {
+  if (sym === 'none') return;
+  for (const i of idxs)
+    for (const t of symTargets(b, i, sym).slice(1))
+      if (!idxs.includes(t.i)) b.cells[t.i].c = xformN(structuredClone($snap(b.cells[i].c)), t.ts);
+}
+
 export function merge(b: Block, idxs: number[]): number | null {
   if (idxs.length < 2) return null;
   const bx = bbox(b, idxs), inside = cellsInBox(b, bx);

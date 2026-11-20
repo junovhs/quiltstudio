@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { scale } from 'svelte/transition';
   import { backOut } from 'svelte/easing';
-  import { Undo2, Redo2, Scissors, Settings, House, ChevronRight, Grid3x3, Ban, FolderOpen, Printer, Wand2, TriangleAlert, Lock, LockOpen, Dices, Camera, Ruler as RulerIcon } from '@lucide/svelte';
+  import { Undo2, Redo2, Scissors, Settings, House, ChevronRight, Grid3x3, Ban, FolderOpen, Printer, Wand2, Lock, LockOpen, Dices, Camera, Ruler as RulerIcon } from '@lucide/svelte';
   import QuiltSize from './components/QuiltSize.svelte';
   import CameraMeasure from './components/CameraMeasure.svelte';
   import Start from './components/Start.svelte';
@@ -24,18 +24,16 @@
   import Print from './components/Print.svelte';
   import DragGhost from './components/DragGhost.svelte';
   import Tidy from './components/Tidy.svelte';
-  import Sizes from './components/Sizes.svelte';
   import Glow from './components/Glow.svelte';
-  import { pieces } from './lib/sizes';
   import Picker from './components/Picker.svelte';
   import Thumb from './components/Thumb.svelte';
   import { app, edit, undo, redo, goTo, scope, enter, loadImages, ui, stats, openMaking } from './lib/store.svelte';
   import { fmt } from './lib/calc';
-  import { groupToBlock, merge, snap, xform, type Xf } from './lib/model';
+  import { groupToBlock, merge, mirrorOut, snap, xform, type Xf } from './lib/model';
 
   /* fabric fills: flat colour, or the user's photo tiled at real scale */
   const fabricCss = $derived(app.doc.fabrics.map(f => {
-    const img = app.images[f.id];
+    const img = f.image ? app.images[f.id] : undefined;
     return `.f-${f.id}{background-color:${f.color};${img ? `background-image:url(${img});background-size:calc(${f.tile} * var(--ppi)) auto;` : ''}}`;
   }).join('\n'));
 
@@ -46,12 +44,11 @@
       app.doc.settings.lockQuilt = app.doc.settings.lockQuilt === false;
     });
   }
-  const oddCount = $derived(pieces(app.doc).filter(p => p.status === 'odd' || p.status === 'near').length);
 
   function xfSel(t: Xf) {
     const b = scope();
     if (app.tool === 'paint' || !app.sel.length) { app.brush = xform(snap(app.brush), t); return; }
-    edit(() => app.sel.forEach(i => { b.cells[i].c = xform(snap(b.cells[i].c), t); }));
+    edit(() => { app.sel.forEach(i => { b.cells[i].c = xform(snap(b.cells[i].c), t); }); mirrorOut(b, app.sel, app.sym); });
   }
 
   function key(e: KeyboardEvent) {
@@ -72,7 +69,7 @@
       case 'j': if (app.sel.length > 1) edit(() => { const j = merge(b, app.sel); if (j != null) app.sel = [j]; }); break;
       case 'g': if (app.sel.length) edit(() => { if (groupToBlock(app.doc, b, app.sel, 'Block')) app.sel = [b.cells.length - 1]; }); break;
       case 'enter': { const c = b.cells[app.sel[0]]?.c; if (c?.k === 'inst') enter(c.ref); break; }
-      case 'delete': case 'backspace': if (app.sel.length) edit(() => app.sel.forEach(i => (b.cells[i].c = { k: 'empty' }))); break;
+      case 'delete': case 'backspace': if (app.sel.length) edit(() => { app.sel.forEach(i => (b.cells[i].c = { k: 'empty' })); mirrorOut(b, app.sel, app.sym); }); break;
       case 'escape': if (ui.measure) ui.measure = null; else if (app.sel.length) app.sel = []; else if (app.path.length) goTo(app.path.length - 1); break;
       case 'a': app.sel = b.cells.map((_, i) => i); e.preventDefault(); break;
     }
@@ -83,7 +80,7 @@
 <svelte:window onkeydown={key} />
 <svelte:head>{@html `<style>${fabricCss}</style>`}</svelte:head>
 
-<div class="app" class:with-sizes={ui.sizes}>
+<div class="app">
   <div class="app-header">
   <header class="top">
     <button class="proj" title={cloud.email ? `My quilts · ${cloud.email}` : 'My quilts'} onclick={() => (ui.projects = true)}>
@@ -108,9 +105,6 @@
     <button class="icon" disabled={!app.canUndo} onclick={undo} title="Undo"><Undo2 size={19} /></button>
     <button class="icon" disabled={!app.canRedo} onclick={redo} title="Redo"><Redo2 size={19} /></button>
     <button class="icon seamsbtn" class:on={app.doc.settings.seams} title="Seams" onclick={() => edit(() => (app.doc.settings.seams = !app.doc.settings.seams))}><Grid3x3 size={19} /></button>
-    <button class="icon sizesbtn" class:on={ui.sizes} class:bad={oddCount} title="Odd sizes" onclick={() => { ui.sizes = !ui.sizes; if (!ui.sizes) ui.glow = []; }}>
-      <TriangleAlert size={19} />{#if oddCount}<span class="badge">{oddCount}</span>{/if}
-    </button>
     <button class="icon" popovertarget="tidy" title="Tidy sizes: snap to normal sizes"><Wand2 size={19} /></button>
     <button class="icon" title="Print blocks" onclick={() => (ui.print = app.path.length ? [app.path.at(-1)!] : [app.doc.root, ...stats().order])}><Printer size={19} /></button>
     <button class="icon" popovertarget="settings" title="Settings"><Settings size={19} /></button>
@@ -125,7 +119,6 @@
 
   <Palette />
   <Canvas />
-  <Sizes />
   <Swatches />
 </div>
 <Glow />
@@ -201,15 +194,10 @@
     .make { margin-left: 4px; padding: 8px 12px; .dots { display: none; } }
     #settings { top: calc(56px + env(safe-area-inset-top)); right: 8px; }
   }
-  .app.with-sizes { grid-template: "top top top top top" 56px "dock palette stage sizes swatches" 1fr / 56px 232px 1fr 330px 72px; }
   @media (height < 500px) and (width >= 760px) {
-    .app.with-sizes { grid-template: "top top top top" calc(44px + env(safe-area-inset-top)) "dock stage sizes swatches" 1fr / calc(56px + env(safe-area-inset-left)) 1fr 300px calc(64px + env(safe-area-inset-right)); }
-  }
+    }
   @media (width < 760px) {
-    .app.with-sizes { grid-template: "top" calc(52px + env(safe-area-inset-top)) "stage" 1fr "sizes" auto "swatches" auto "dock" auto / 100%; }
-  }
-  .sizesbtn { position: relative; &.bad { color: oklch(62% 0.16 55); } &.on { color: var(--accent-ink); }
-    .badge { position: absolute; top: 2px; right: 0; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 99px; background: oklch(62% 0.16 55); color: white; font-size: 10px; font-weight: 800; display: grid; place-items: center; } }
+    }
   .proj { display: flex; align-items: center; gap: 8px; padding: 5px 10px 5px 5px; margin-right: 14px; border: 0; border-radius: 12px; background: transparent; color: var(--muted);
     &:hover { background: var(--sunk); color: var(--ink); } }
   .logo { width: 28px; height: 28px; }
@@ -235,8 +223,7 @@
   }
   @media (width < 760px) {
     .app { grid-template-rows: auto 1fr auto auto; }
-    .app.with-sizes { grid-template-rows: auto 1fr auto auto auto; }
-    .top { flex-wrap: wrap; gap: 3px; padding-top: max(6px, env(safe-area-inset-top)); padding-bottom: 6px; }
+      .top { flex-wrap: wrap; gap: 3px; padding-top: max(6px, env(safe-area-inset-top)); padding-bottom: 6px; }
     .top > button { flex-shrink: 0; min-height: 42px; }
     .top .icon { width: 40px; }
     .where { margin-left: 0; }
@@ -264,6 +251,6 @@
   ::view-transition-new(canvas) { animation-name: vt-in; }
   @keyframes -global-vt-out { to { opacity: 0; scale: .92; } }
   @keyframes -global-vt-in { from { opacity: 0; scale: 1.06; } }
-  .app, .app.with-sizes { grid-template-rows: auto minmax(0,1fr); }
-  @media(width < 760px) { .app { grid-template-rows: auto minmax(0,1fr) auto auto; } .app.with-sizes { grid-template-rows: auto minmax(0,1fr) auto auto auto; } }
+  .app { grid-template-rows: auto minmax(0,1fr); }
+  @media(width < 760px) { .app { grid-template-rows: auto minmax(0,1fr) auto auto; } }
 </style>

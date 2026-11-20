@@ -1,22 +1,21 @@
 <script lang="ts">
-  import { scale, fly } from 'svelte/transition';
+  import { scale } from 'svelte/transition';
   import { backOut } from 'svelte/easing';
-  import { RotateCw, FlipHorizontal2, FlipVertical2, Combine, Group, Grid2x2, Trash2, Maximize2, X, Printer, Scissors, Lock, LockOpen, Ruler } from '@lucide/svelte';
+  import { RotateCw, FlipHorizontal2, FlipVertical2, Combine, Group, Trash2, Maximize2, Printer, Scissors, Lock, LockOpen, Ruler } from '@lucide/svelte';
   import Tile from './Tile.svelte';
   import { app, edit, enter, scope, scopeId, ui, rollback, tryChange, openMaking, useCount, replaceDoc } from '../lib/store.svelte';
   import { independentPiece } from '../lib/planning';
   import { pieces, whereIs, resizePiece, resizeCells, parseSize } from '../lib/sizes';
   import { cellSize, fmt } from '../lib/calc';
-  import { fabricsOf, groupToBlock, makeKind, merge, mergeSame, snap, splitCell, xform, cellIndexAt, UNITS, type Kind, type Xf } from '../lib/model';
+  import { fabricsOf, groupToBlock, makeKind, merge, mergeSame, mirrorOut, snap, xform, cellIndexAt, UNITS, type Kind, type Xf } from '../lib/model';
 
   const b = $derived(scope());
   const sel = $derived(app.sel.filter(i => b.cells[i]));
   const first = $derived(sel.length ? b.cells[sel[0]] : null);
-  let splitting = $state(false);
-  const SPLITS: [number, number][] = [[2, 1], [1, 2], [2, 2], [3, 3], [4, 4]];
   const KINDS = UNITS;
 
-  const each = (fn: (i: number) => void) => edit(() => sel.forEach(fn));
+  // every change is copied to the mirrored spots when a symmetry is on
+  const each = (fn: (i: number) => void) => edit(() => { sel.forEach(fn); mirrorOut(b, sel, app.sym); });
   const xf = (t: Xf) => each(i => { b.cells[i].c = xform(snap(b.cells[i].c), t); });
   const setKind = (k: Kind) => each(i => { const c = b.cells[i]; c.c = makeKind(k, c.c.k === 'inst' ? [app.fabric] : fabricsOf(c.c), app.fabric); });
   const sample = (k: Kind) => makeKind(k, first && first.c.k !== 'inst' && first.c.k !== 'empty' ? fabricsOf(first.c) : [app.fabric, 'cream'], app.fabric);
@@ -36,7 +35,6 @@
     });
   }
   function doGroup() { edit(() => { if (groupToBlock(app.doc, b, sel, 'Block')) app.sel = [b.cells.length - 1]; }); }
-  function doSplit(n: number, m: number) { splitting = false; if (first) edit(() => splitCell(app.doc, b, sel[0], n, m, 'Block')); }
   const clear = () => each(i => { b.cells[i].c = { k: 'empty' }; });
   let refused = $state(false);
   function setSize(input: HTMLInputElement, cur: { w: number; h: number }) {
@@ -72,18 +70,6 @@
   {@const sz = cellSize(app.doc, scopeId(), sel[0])}
   {@const seam = app.doc.settings.seam}
   <div class="bar" in:scale={{ start: 0.85, duration: 380, easing: backOut }} out:scale={{ start: 0.9, duration: 140 }}>
-    {#if splitting}
-      <div class="grp" in:fly={{ x: 12, duration: 250 }}>
-        {#each SPLITS as [n, m]}
-          <button class="icon" title="{n}×{m}" onclick={() => doSplit(n, m)}>
-            <span class="glyph" style:grid-template-columns="repeat({n}, 1fr)" style:grid-template-rows="repeat({m}, 1fr)">
-              {#each Array(n * m) as _}<i></i>{/each}
-            </span>
-          </button>
-        {/each}
-        <button class="icon" title="Back" onclick={() => (splitting = false)}><X size={16} /></button>
-      </div>
-    {:else}
       {#if !app.path.length && sel.length === 1}<button class="icon" title="Record made size and plan next strip" aria-label="Record made size and plan next strip" onclick={() => openMaking(sel[0])}><Ruler size={19} /></button>{/if}
       {#if sz}
         <!-- finished size in inches, cut size underneath -->
@@ -96,7 +82,7 @@
       {/if}
       {#if first.c.k === 'inst' && sel.length === 1}
         {#if !app.path.length && useCount(first.c.ref) > 1}<button title="Make this copy independent before changing its design" onclick={() => replaceDoc(independentPiece($state.snapshot(app.doc), sel[0]))}>Unlink copy</button>{/if}
-        <button class="icon" title="Open this block  ↵" onclick={() => first.c.k === 'inst' && enter(first.c.ref)}><Maximize2 size={17} /></button>
+        <button class="icon" title="Open this block on its own" onclick={() => first.c.k === 'inst' && enter(first.c.ref, false)}><Maximize2 size={17} /></button>
         {@const blk = app.doc.blocks[first.c.ref]}
         <button class="icon" class:on={blk?.locked} title={blk?.locked ? 'Size locked' : 'Lock its size'} onclick={() => edit(() => { if (blk) blk.locked = !blk.locked; })}>
           {#if blk?.locked}<Lock size={17} />{:else}<LockOpen size={17} />{/if}
@@ -115,10 +101,8 @@
       {#if first.c.k !== 'inst' && first.c.k !== 'empty'}
         <button class="icon" title={sel.length > 1 ? 'Join these into bigger pieces' : 'Join with touching pieces of the same fabric'} onclick={doMerge}><Combine size={17} /></button>
       {:else if sel.length > 1}<button class="icon" title="Join into one piece" onclick={doMerge}><Combine size={17} /></button>{/if}
-      <button class="icon" title="Make a block from this  G" onclick={doGroup}><Group size={17} /></button>
-      {#if sel.length === 1}<button class="icon" title="Cut into smaller pieces" onclick={() => (splitting = true)}><Grid2x2 size={17} /></button>{/if}
+      {#if sel.length > 1}<button class="mk" title="Make a block from these  G" onclick={doGroup}><Group size={16} /> Make block</button>{/if}
       <button class="icon" title="Clear  ⌫" onclick={clear}><Trash2 size={17} /></button>
-    {/if}
   </div>
 {/if}
 
@@ -138,7 +122,6 @@
       .icon { flex: none; } .kind { flex: none; }
     }
   }
-  .grp { display: flex; gap: 2px; }
   .cutin { display: flex; align-items: center; gap: 3px; font-size: 12px; color: var(--muted); font-weight: 700; padding: 1px 4px; border-radius: 6px; cursor: text;
     &:hover, &:focus-within { background: var(--sunk); color: var(--ink); }
     input { width: 3.2em; field-sizing: fixed; border: 0; background: none; font: inherit; color: inherit; padding: 0; text-align: right; }
@@ -150,9 +133,9 @@
     &.no input { animation: shake .4s var(--ease); border-color: oklch(60% 0.2 25); }
     b { font-size: 15px; font-weight: 800; letter-spacing: -.01em; }
     small { display: flex; align-items: center; gap: 3px; font-size: 11px; color: var(--muted); font-weight: 600; } }
+  .mk { display: flex; align-items: center; gap: 6px; padding: 6px 10px; margin: 0 2px; border: 0; border-radius: 9px; background: var(--accent-soft); color: var(--accent); font-weight: 700; white-space: nowrap; flex: none; }
   .sep { width: 1px; height: 22px; background: var(--line); margin: 0 4px; }
   .kind { position: relative; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 7px; overflow: hidden; margin: 0 2px;
     box-shadow: 0 0 0 0 var(--accent); transition: box-shadow .25s, scale .35s var(--spring);
     &:hover { scale: 1.1; } &.on { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent); } }
-  .glyph { display: grid; gap: 2px; width: 18px; height: 18px; i { background: currentColor; border-radius: 1.5px; opacity: .75; } }
 </style>

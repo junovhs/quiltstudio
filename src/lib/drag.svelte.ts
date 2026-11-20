@@ -3,6 +3,7 @@
  * Turn it while carrying: R, scroll wheel, right-click, or the turn button (second finger). */
 import { app, edit, scope, scopeId, ui } from './store.svelte';
 import { snap, sum, symTargets, uses, xform, xformN, type Content } from './model';
+import { aspectOf, fitIn, frameOf, placeFitted, type Fit } from './fit';
 
 export interface Drag {
   c: Content;                        // what's being carried (orientation included)
@@ -11,19 +12,14 @@ export interface Drag {
   over: number;                      // slot under the pointer, -1 if none
   rect: DOMRect | null;              // that slot on screen
   fits: boolean;
-  manual: boolean;                   // user turned it: don't auto-turn
+  manual: boolean;
+  fit: Fit | null;                   // the part of the slot it will take (it keeps its own shape)                   // user turned it: don't auto-turn
 }
 
 export const drag = $state<{ d: Drag | null; bounce: number }>({ d: null, bounce: 0 });
 
 /** proportions of what's carried, as it currently faces (width / height) */
-function aspect(c: Content): number | null {
-  if (c.k !== 'inst') return null;   // plain shapes stretch to any slot
-  const b = app.doc.blocks[c.ref];
-  if (!b) return null;
-  const r = sum(b.cols) / sum(b.rows);
-  return c.rot % 2 ? 1 / r : r;
-}
+const aspect = (c: Content) => aspectOf(app.doc, c);
 function slotAspect(i: number) {
   const b = scope(), c = b.cells[i];
   return sum(b.cols, c.x, c.cs) / sum(b.rows, c.y, c.rs);
@@ -32,21 +28,25 @@ const close = (a: number, b: number) => Math.abs(Math.log(a / b)) < 0.03;
 
 function slotAt(x: number, y: number) {
   const el = document.elementFromPoint(x, y)?.closest<HTMLElement>(`.cell[data-def="${CSS.escape(scopeId())}"]`);
-  return el ? { i: +el.dataset.i!, rect: el.getBoundingClientRect() } : null;
+  const grid = el?.closest<HTMLElement>('.grid');
+  return el && grid ? { i: +el.dataset.i!, rect: el.getBoundingClientRect(), grid } : null;
 }
 
 function update(x: number, y: number) {
   const d = drag.d!;
   d.x = x; d.y = y;
   const hit = slotAt(x, y);
-  if (!hit || hit.i === d.from) { d.over = -1; d.rect = null; d.fits = false; return; }
+  if (!hit || hit.i === d.from) { d.over = -1; d.rect = null; d.fits = false; d.fit = null; return; }
   const sa = slotAspect(hit.i);
   let a = aspect(d.c);
   // turn it for them when the other way round would fit (unless they've turned it themselves)
   if (a != null && !d.manual && !close(a, sa) && close(1 / a, sa)) { d.c = xform(snap(d.c), 'r'); a = 1 / a; }
   const cyclic = d.c.k === 'inst' && uses(app.doc, d.c.ref, scopeId());
-  d.over = hit.i; d.rect = hit.rect;
-  d.fits = !cyclic && (a == null || close(a, sa));
+  // it keeps its own shape: work out which part of the slot it takes, nearest the pointer
+  const b = scope(), f = frameOf(hit.grid, sum(b.cols), sum(b.rows));
+  d.fit = fitIn(b, hit.i, a, f.toLocal(x, y));
+  d.over = hit.i; d.rect = d.fit.whole ? hit.rect : f.rectOf(d.fit.x0, d.fit.y0, d.fit.x1, d.fit.y1);
+  d.fits = !cyclic;
 }
 
 export function turn() {
@@ -62,6 +62,13 @@ function drop() {
   if (!d || d.over < 0 || !d.fits) { drag.bounce++; return; }
   const b = scope(), to = d.over, from = d.from;
   edit(() => {
+    const fit = d.fit;
+    if (fit && !fit.whole) {
+      // a different shape: it takes its own part of the slot, the rest stays as a gutter
+      if (from != null) b.cells[from].c = { k: 'empty' };
+      app.sel = [placeFitted(b, to, d.c, fit, snap)];
+      return;
+    }
     if (from != null) {
       // moving within the quilt: swap with whatever was there
       const there = snap(b.cells[to].c);
@@ -97,7 +104,7 @@ function track(id: number, sx: number, sy: number, c: Content, from: number | nu
   const begin = (x: number, y: number) => {
     started = true;
     ui.palette = false;
-    drag.d = { c: snap(c), from, x, y, over: -1, rect: null, fits: false, manual: false };
+    drag.d = { c: snap(c), from, x, y, over: -1, rect: null, fits: false, manual: false, fit: null };
     document.body.classList.add('dragging-piece');
     update(x, y);
   };
@@ -149,7 +156,7 @@ export function placeInSelection(c: Content) {
       let cc = snap(c);
       const a = aspect(cc), sa = slotAspect(i);
       if (a != null && !close(a, sa) && close(1 / a, sa)) cc = xform(cc, 'r');
-      b.cells[i].c = cc;
+      placeFitted(b, i, cc, fitIn(b, i, aspect(cc), null), snap);
     }
   });
   return true;

@@ -31,3 +31,16 @@ export function withPalette(doc: Doc, id: string | null): Doc {
   const binding: Fabric = { id: `${p.id}b`, name: 'Binding', color: darkest.color, tile: 6 };
   return { ...doc, fabrics: [...fabrics, binding], settings: { ...doc.settings, binding: binding.id } };
 }
+
+/** recolour the quilt in place: fabrics keep their places, lightest gets the palette's lightest and so on.
+ * `turn` shifts which colour goes where (for shuffling). `lum` gives a colour's lightness 0–255. */
+export function recolour(doc: Doc, p: Palette, lum: (c: string) => number, turn = 0) {
+  const fabs = doc.fabrics.toSorted((a, b) => lum(a.color) - lum(b.color));
+  const cols = p.colors.toSorted((a, b) => lum(a[1]) - lum(b[1]));
+  const n = fabs.length, m = cols.length;
+  fabs.forEach((f, i) => {
+    const j = n > 1 ? Math.round((i * (m - 1)) / (n - 1)) : 0;
+    const [name, color] = cols[(j + turn) % m];
+    f.color = color; f.name = name; f.image = false;
+  });
+}

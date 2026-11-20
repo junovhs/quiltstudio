@@ -2,7 +2,8 @@
   import { flip } from 'svelte/animate';
   import { scale } from 'svelte/transition';
   import { backOut } from 'svelte/easing';
-  import { Plus, ImagePlus, ImageOff, Trash2, Pipette } from '@lucide/svelte';
+  import { Plus, ImagePlus, ImageOff, Trash2, Pipette, Palette as PaletteIcon, Shuffle } from '@lucide/svelte';
+  import { PALETTES, recolour, type Palette } from '../lib/palettes';
   import { app, edit, setImage, stats } from '../lib/store.svelte';
   import { uid } from '../lib/model';
   import { yd } from '../lib/calc';
@@ -43,6 +44,23 @@
     edit(() => { ef.image = true; });
   }
   async function dropImage() { if (!ef) return; await setImage(ef.id, null); edit(() => { ef.image = false; }); }
+  /* ---------- whole-quilt colour schemes ---------- */
+  const lum = (c: string) => { const n = parseInt(toHex(c).slice(1), 16); return 0.2126 * (n >> 16) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255); };
+  // picking the same scheme again moves the colours round one place
+  let lastPal = '', turn = 0;
+  function usePalette(p: Palette) {
+    turn = lastPal === p.id ? turn + 1 : 0;
+    lastPal = p.id;
+    edit(() => recolour(app.doc, p, lum, turn));
+  }
+  function shuffle() {
+    edit(() => {
+      const cs = app.doc.fabrics.map(f => [f.color, f.name] as const);
+      for (let i = cs.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [cs[i], cs[j]] = [cs[j], cs[i]]; }
+      app.doc.fabrics.forEach((f, i) => { [f.color, f.name] = cs[i]; });
+    });
+    lastPal = '';
+  }
   // the colour input wants hex
   function toHex(c: string) {
     if (c.startsWith('#')) return c;
@@ -51,6 +69,8 @@
 </script>
 
 <aside class="swatches">
+  <button class="sw scheme" title="Colour scheme: recolour the whole quilt" popovertarget="schemes"><PaletteIcon size={20} /></button>
+  <span class="div"></span>
   {#each app.doc.fabrics as f (f.id)}
     <div class="slot" animate:flip={{ duration: 350, easing: backOut }} in:scale={{ start: 0.4, duration: 450, easing: backOut }}>
       <button class="sw f-{f.id}" class:on={app.fabric === f.id}
@@ -61,6 +81,19 @@
   {/each}
   <button class="sw add" title="Add fabric" onclick={addFabric}><Plus size={20} /></button>
 </aside>
+
+<div popover id="schemes">
+  <div class="schemes">
+    <div class="hd"><b>Colour scheme</b><button class="shuf" title="Swap the colours around" onclick={shuffle}><Shuffle size={15} /> Shuffle</button></div>
+    <p>Recolours the whole quilt. Lights stay light, darks stay dark. Click again to rotate the colours.</p>
+    {#each PALETTES as p (p.id)}
+      <button class="pal" onclick={() => usePalette(p)}>
+        <span class="chips">{#each p.colors as [n, c]}<i style:background={c} title={n}></i>{/each}</span>
+        <span class="nm">{p.name}</span>
+      </button>
+    {/each}
+  </div>
+</div>
 
 <div popover id="fabedit" bind:this={pop}>
   {#if ef}
@@ -95,6 +128,20 @@
     &:hover { scale: 1.1; }
     &.on { box-shadow: inset 0 0 0 1px oklch(0% 0 0 / 12%), 0 0 0 3px var(--panel), 0 0 0 5px var(--accent); scale: 1.08; }
   }
+  .scheme { display: grid; place-items: center; color: var(--ink); background: conic-gradient(from 20deg, #e76f51, #f4a261, #e9c46a, #2a9d8f, #457b9d, #8d6cab, #e76f51);
+    :global(svg) { background: var(--panel); border-radius: 50%; padding: 5px; box-sizing: content-box; } }
+  .div { width: 24px; height: 1px; background: var(--line); flex: none; }
+  #schemes { inset: auto; top: 64px; right: 84px; width: 300px; max-height: calc(100dvh - 90px); overflow-y: auto;
+    @media (width < 760px) { right: 8px; left: 8px; width: auto; top: auto; bottom: calc(var(--bars, 120px) + 70px); max-height: 60dvh; } }
+  .schemes { display: grid; gap: 4px;
+    .hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; b { font-size: 15px; } }
+    p { margin: 0 0 6px; font-size: 12.5px; color: var(--muted); }
+    .shuf { display: flex; align-items: center; gap: 5px; border: 0; border-radius: 8px; padding: 5px 9px; background: var(--sunk); font-weight: 600; } }
+  .pal { display: flex; align-items: center; gap: 10px; padding: 6px; border: 0; border-radius: 10px; background: transparent; text-align: left;
+    &:hover { background: var(--sunk); }
+    .chips { display: flex; flex: none; width: 128px; i { width: 22px; height: 22px; border-radius: 50%; margin-right: -5px; box-shadow: 0 0 0 2px var(--panel); } }
+    .nm { margin-left: 8px; font-weight: 600; } }
+  @media (width < 760px) { .div { width: 1px; height: 24px; } }
   .add { display: grid; place-items: center; background: transparent; color: var(--muted); box-shadow: inset 0 0 0 2px var(--line);
     &:hover { color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); } }
   @media (width < 760px) {

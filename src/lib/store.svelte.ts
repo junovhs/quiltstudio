@@ -76,6 +76,8 @@ export const app = $state({
   sel: [] as number[],           // selected cell indexes in the current scope
   tool: 'select' as Tool,
   sym: 'none' as Sym,
+  /** editing the open block right on the quilt (true) or on its own (false) */
+  inPlace: false,
   fabric: booted.doc.fabrics[0]?.id ?? '',
   brush: { k: 'hst', a: booted.doc.fabrics[0]?.id ?? '', b: booted.doc.fabrics[1]?.id ?? booted.doc.fabrics[0]?.id ?? '', corner: 'br' } as Content,
   images: {} as Record<string, string>, // fabric id -> object URL
@@ -254,9 +256,16 @@ export async function loadImages() {
 function transition(fn: () => void) {
   document.startViewTransition ? document.startViewTransition(() => flushSync(fn)) : fn();
 }
-export function enter(id: string) { transition(() => { app.path = [...app.path, id]; app.sel = []; }); }
-export function goTo(depth: number) { transition(() => { app.path = app.path.slice(0, depth); app.sel = []; }); }
-export function openBlock(id: string) { transition(() => { app.path = id === app.doc.root ? [] : [id]; app.sel = []; }); }
+/** open a block inside the current one: in place on the quilt (default when already there or at the top), or on its own */
+export function enter(id: string, inPlace = app.inPlace || !app.path.length) {
+  const go = () => { app.path = [...app.path, id]; app.sel = []; app.inPlace = inPlace; };
+  inPlace ? go() : transition(go);
+}
+export function goTo(depth: number) {
+  const go = () => { app.path = app.path.slice(0, depth); app.sel = []; if (!depth) app.inPlace = false; };
+  app.inPlace ? go() : transition(go);
+}
+export function openBlock(id: string) { transition(() => { app.path = id === app.doc.root ? [] : [id]; app.sel = []; app.inPlace = false; }); }
 
 /* ---------------- live numbers (computed once per change, shared) ---------------- */
 const analysis = $derived(analyse(app.doc));
